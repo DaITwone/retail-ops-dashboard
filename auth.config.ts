@@ -14,7 +14,10 @@ export const authConfig = {
         "/orders",
         "/staff",
         "/cancellations",
-        "/waste"
+        "/waste",
+        "/staff",
+        "/shift",
+        "/reports"
       ];
       const isOnProtectedRoute = protectedRoutes.some((route) =>
         nextUrl.pathname.startsWith(route),

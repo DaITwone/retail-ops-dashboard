@@ -30,13 +30,13 @@ const menu = [
   {
     label: "NHÂN SỰ",
     items: [
-      { name: "Quản Lý Nhân Sự", href: "/nhan-su", icon: Users },
-      { name: "Phân Ca", href: "/phan-ca", icon: CalendarDays },
+      { name: "Quản Lý Nhân Sự", href: "/staff", icon: Users },
+      { name: "Phân Ca", href: "/shifts", icon: CalendarDays },
     ],
   },
   {
     label: "PHÂN TÍCH",
-    items: [{ name: "Báo cáo", href: "/bao-cao", icon: BarChart3 }],
+    items: [{ name: "Báo cáo", href: "/reports", icon: BarChart3 }],
   },
 ];
 
