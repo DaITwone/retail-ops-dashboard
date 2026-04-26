@@ -11,6 +11,7 @@
   --bg-sidebar-active: rgba(217,64,64,0.12);
   --bg-button: #EDE9E2;
   --bg-button-hover: #f5f2ed;
+  --bg-table: #EDE9E2;
 
   --shadow-chart: 2px_2px_0px_2px_rgba(168,162,154,0.15);
 
@@ -103,6 +104,7 @@
   --bg-base: #141416;
   --bg-button: #2C2C2A;
   --bg-button-hover:#888888;
+  --bg-table: #3C3C3A;
   --text-primary: #f0ede6;
   --text-secondary: #888888;
   --text-muted: #555555;

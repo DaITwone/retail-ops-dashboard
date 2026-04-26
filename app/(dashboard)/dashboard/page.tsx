@@ -40,6 +40,7 @@ import {
   AlertTriangle,
   Clock,
 } from "lucide-react";
+import { KpiCard } from "@/components/ui/kpi-card";
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -113,95 +114,6 @@ const statusColor: Record<string, string> = {
   "Đang giao": "bg-blue-100 text-blue-700",
   "Chờ xác nhận": "bg-yellow-100 text-yellow-700",
 };
-
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
-
-
-type DeltaType = "up" | "down" | "warn";
-
-const STATE = {
-  up: {
-    border: "border-[#227D52]",
-    shadow: "shadow-[2px_2px_0px_2px_rgba(34,125,82,0.12)]",
-    valueColor: "text-[#1A1A1A] dark:text-white",
-    deltaColor: "text-[#227D52]",
-    dot: "bg-[#227D52]",
-    prefix: "▲",
-  },
-  down: {
-    border: "border-[#C0392B]",
-    shadow: "shadow-[2px_2px_0px_2px_rgba(192,57,43,0.12)]",
-    valueColor: "text-[#C0392B]",
-    deltaColor: "text-[#C0392B]",
-    dot: "bg-[#C0392B]",
-    prefix: "▼",
-  },
-  warn: {
-    border: "border-[#C07A2B]",
-    shadow: "shadow-[2px_2px_0px_2px_rgba(192,122,43,0.12)]",
-    valueColor: "text-[#C07A2B]",
-    deltaColor: "text-[#C07A2B]",
-    dot: "bg-[#C07A2B]",
-    prefix: "⚠",
-  },
-} satisfies Record<DeltaType, any>;
-
-const NEUTRAL = {
-  border: "border-[#A8A29A] dark:border-[#3C3C3A]",
-  shadow: "shadow-[2px_2px_0px_2px_rgba(168,162,154,0.15)]",
-  valueColor: "text-[#1A1A1A] dark:text-white",
-  deltaColor: "text-[#B0ABA3]",
-  dot: "bg-[#B0ABA3]",
-  prefix: "",
-};
-
-interface KpiCardProps {
-  title: string;
-  value: string;
-  change?: string;
-  deltaType?: DeltaType;
-  icon: React.ReactNode;
-  sub?: string;
-}
-
-function KpiCard({
-  title,
-  value,
-  change,
-  deltaType,
-  icon,
-}: KpiCardProps) {
-  const s = deltaType ? STATE[deltaType] : NEUTRAL;
-
-  return (
-    <div
-      className={`rounded p-4 bg-(--bg-base) border-2 flex flex-col gap-1 ${s.border} ${s.shadow}`}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-          <p className="text-[10px] font-mono text-[#B0ABA3] tracking-widest uppercase">
-            {title}
-          </p>
-        </div>
-
-        <div className="w-7 h-7 text-(--text-muted) rounded-sm bg-(--bg-button) flex items-center justify-center">
-          {icon}
-        </div>
-      </div>
-
-      <p className={`text-2xl font-bold font-mono mt-1 ${s.valueColor}`}>
-        {value}
-      </p>
-
-      {change && (
-        <p className={`text-[11px] font-mono ${s.deltaColor}`}>
-          {s.prefix ? `${s.prefix} ${change}` : change}
-        </p>
-      )}
-    </div>
-  );
-}
 
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
 

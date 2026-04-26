@@ -41,3 +41,11 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     }),
   ],
 });
+
+/**
+ * auth.ts -> Authentication
+ * - Định nghĩa cách user đăng nhập
+ * - Providers (Credentials, Google, GitHub,..)
+ * - authorize() -> check email, password
+ * - Tạo session (JWT/cookie)
+ */
