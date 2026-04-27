@@ -518,8 +518,8 @@ export default function WastePage() {
       </div>
 
       {/* ── Table ── */}
-      <div className="border-2 border-(--border-button) rounded overflow-hidden mt-2 font-mono">
-        <table className="w-full border-collapse">
+      <div className="overflow-x-auto mt-2 font-mono">
+        <table className="w-full border-collapse border-2 border-(--border-button) rounded-2xl">
           <thead className="bg-(--bg-table)">
             <tr>
               <th className="w-9 px-3 py-3 text-left">
@@ -543,7 +543,7 @@ export default function WastePage() {
             {data.map(record => (
               <tr
                 key={record.id}
-                className="border-t border-[#F0EDE8] hover:bg-[rgba(245,242,237,0.6)] transition-colors"
+                className="border-t border-(--border-button) hover:bg-[rgba(245,242,237,0.6)] transition-colors"
               >
                 {/* Checkbox */}
                 <td className="px-3 py-3">

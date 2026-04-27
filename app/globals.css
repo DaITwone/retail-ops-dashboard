@@ -102,12 +102,12 @@
 
 .dark {
   --bg-base: #141416;
-  --bg-button: #2C2C2A;
+  --bg-button: #1A1A1A;
   --bg-button-hover:#888888;
   --bg-table: #3C3C3A;
   --text-primary: #f0ede6;
   --text-secondary: #888888;
-  --text-muted: #555555;
+  --text-muted: #B0ABA3;
   --text-sidebar: #888888;
 
   --border: oklch(1 0 0 / 10%);
