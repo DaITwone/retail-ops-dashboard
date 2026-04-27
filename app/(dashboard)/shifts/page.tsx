@@ -467,13 +467,13 @@ export default function SchedulePage() {
 
   return (
     <div
-      className="p-6 min-h-screen"
+      className="p-6 space-y-6 min-h-screen"
       style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
     >
       {/* Page header */}
       <div className="mb-4">
-        <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-          Lịch Làm Việc
+        <h1 className="text-md font-bold" style={{ color: "var(--text-primary)" }}>
+          LỊCH LÀM VIỆC
         </h1>
         <p className="text-[12px] mt-0.5" style={{ color: "var(--text-muted)" }}>
           Click ô khung giờ để gán ca cho nhân viên · xem theo{" "}
