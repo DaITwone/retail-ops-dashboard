@@ -17,7 +17,8 @@ export const authConfig = {
         "/waste",
         "/staff",
         "/shift",
-        "/reports"
+        "/reports",
+        "/orders"
       ];
       const isOnProtectedRoute = protectedRoutes.some((route) =>
         nextUrl.pathname.startsWith(route),

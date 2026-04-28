@@ -23,7 +23,7 @@ const menu = [
     items: [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "Tồn Kho", href: "/inventory", icon: Boxes },
-      { name: "Đặt Hàng", href: "/order", icon: ShoppingCart },
+      { name: "Đặt Hàng", href: "/orders", icon: ShoppingCart },
       { name: "Hỏng Hủy", href: "/waste", icon: Trash2 },
     ],
   },
