@@ -1,0 +1,284 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────
+
+enum Role {
+  MANAGER
+  STAFF
+}
+
+enum OrderStatus {
+  PENDING
+  APPROVED
+  DELIVERING
+  DELIVERED
+  REJECTED
+}
+
+enum WasteStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ShiftStatus {
+  ASSIGNED
+  CHECKED_IN
+  ABSENT
+}
+
+enum InventoryLogType {
+  IMPORT
+  EXPORT
+  WASTE
+  ADJUSTMENT
+}
+
+// ─────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────
+
+model User {
+  id        String  @id @default(cuid())
+  name      String
+  email     String  @unique
+  password  String
+  phone     String?
+  role      Role    @default(STAFF)
+
+  orders         Order[] @relation("CreatedOrders")
+  wastes         Waste[] @relation("CreatedWastes")
+  approvedOrders Order[] @relation("ApprovedOrders")
+  approvedWastes Waste[] @relation("ApprovedWastes")
+
+  shifts        ShiftAssignment[]
+  inventoryLogs InventoryLog[]
+
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────
+// PRODUCT & INVENTORY
+// ─────────────────────────────────────────
+
+model Product {
+  id       String  @id @default(cuid())
+  name     String
+  sku      String  @unique
+  category String
+  unit     String
+  price    Decimal @db.Decimal(10, 2)
+
+  isActive Boolean @default(true)
+
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+
+  inventory     Inventory?
+  orderItems    OrderItem[]
+  wasteItems    WasteItem[]
+  inventoryLogs InventoryLog[]
+  saleItems     SaleItem[]
+
+  createdAt DateTime @default(now())
+}
+
+model Inventory {
+  id        String  @id @default(cuid())
+  productId String  @unique
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity Int
+  minStock Int
+  expiry   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model InventoryLog {
+  id        String           @id @default(cuid())
+  productId String
+  product   Product          @relation(fields: [productId], references: [id])
+
+  type      InventoryLogType
+  quantity  Int
+  note      String?
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────
+// SUPPLIER
+// ─────────────────────────────────────────
+
+model Supplier {
+  id      String  @id @default(cuid())
+  name    String
+  contact String?
+
+  products Product[]
+  orders   Order[]
+}
+
+// ─────────────────────────────────────────
+// ORDER
+// ─────────────────────────────────────────
+
+model Order {
+  id   String @id @default(cuid())
+  code String @unique // format: PO-20247
+
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+
+  createdById String
+  createdBy   User   @relation("CreatedOrders", fields: [createdById], references: [id])
+
+  approvedById String?
+  approvedBy   User?     @relation("ApprovedOrders", fields: [approvedById], references: [id])
+  approvedAt   DateTime?
+
+  status      OrderStatus @default(PENDING)
+  totalAmount Decimal     @db.Decimal(12, 2)
+
+  deliveryDate DateTime?
+  receivedAt   DateTime?
+
+  note String?
+
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderItem {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity Int
+  price    Decimal @db.Decimal(10, 2)
+
+  @@unique([orderId, productId])
+}
+
+// ─────────────────────────────────────────
+// WASTE
+// ─────────────────────────────────────────
+
+model Waste {
+  id String @id @default(cuid())
+
+  createdById String
+  createdBy   User   @relation("CreatedWastes", fields: [createdById], references: [id])
+
+  approvedById String?
+  approvedBy   User?     @relation("ApprovedWastes", fields: [approvedById], references: [id])
+  approvedAt   DateTime?
+
+  status      WasteStatus @default(PENDING)
+  reason      String
+  totalAmount Decimal     @db.Decimal(12, 2)
+
+  items WasteItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WasteItem {
+  id String @id @default(cuid())
+
+  wasteId String
+  waste   Waste  @relation(fields: [wasteId], references: [id])
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity Int
+  amount   Decimal @db.Decimal(10, 2)
+
+  @@unique([wasteId, productId])
+}
+
+// ─────────────────────────────────────────
+// SHIFT
+// ─────────────────────────────────────────
+
+model Shift {
+  id        String @id @default(cuid())
+  name      String
+  code      String
+  startTime Int
+  endTime   Int
+  color     String?
+
+  assignments ShiftAssignment[]
+
+  createdAt DateTime @default(now())
+}
+
+model ShiftAssignment {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  shiftId String
+  shift   Shift  @relation(fields: [shiftId], references: [id])
+
+  date   DateTime
+  status ShiftStatus?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date, shiftId])
+}
+
+// ─────────────────────────────────────────
+// SALE
+// ─────────────────────────────────────────
+
+model SaleRecord {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  totalAmount Decimal  @db.Decimal(12, 2)
+  orderCount  Int      @default(0)
+
+  items SaleItem[]
+
+  createdAt DateTime @default(now())
+}
+
+model SaleItem {
+  id           String     @id @default(cuid())
+  saleRecordId String
+  saleRecord   SaleRecord @relation(fields: [saleRecordId], references: [id])
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity Int
+  amount   Decimal @db.Decimal(10, 2)
+}
