@@ -107,11 +107,9 @@ model Product {
   unit     String
   price    Decimal @db.Decimal(10, 2)
 
-  // FIX #7: Thêm imageUrl cho ProductThumb ở trang tồn kho
   imageUrl String?
-
   isActive Boolean @default(true)
-
+  
   supplierId String?
   supplier   Supplier? @relation(fields: [supplierId], references: [id])
 
@@ -171,7 +169,7 @@ model InventoryLog {
 
 model Supplier {
   id      String  @id @default(cuid())
-  name    String
+  name    String @unique
   contact String?
 
   products Product[]
