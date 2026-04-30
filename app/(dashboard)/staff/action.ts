@@ -1,0 +1,155 @@
+"use server";
+
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
+import { Role } from "@/generated/prisma/enums";
+
+export type StaffRow = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: Role;
+  isActive: boolean;
+  createdAt: Date;
+  // Tính từ ShiftAssignment của hôm nay
+  currentShiftName: string | null;
+  shiftStatus: "dang-lam" | "nghi-ca" | "chua-check-in" | "nghi-phep";
+  // Số ca đã làm trong tháng hiện tại
+  daysWorked: number;
+  totalDaysInMonth: number;
+};
+
+export type CreateStaffInput = {
+  name: string;
+  email: string;
+  phone: string;
+  role: Role;
+  password?: string;
+};
+
+function getDaysInCurrentMonth() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+}
+
+function getStartOfDay(date: Date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function getEndOfDay(date: Date) {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+function getStartOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+export async function getStaffList(): Promise<StaffRow[]> {
+  const now = new Date();
+  const todayStart = getStartOfDay(now);
+  const todayEnd = getEndOfDay(now);
+  const monthStart = getStartOfMonth(now);
+  const totalDaysInMonth = getDaysInCurrentMonth();
+
+  const users = await prisma.user.findMany({
+    where: { isActive: true },
+    orderBy: { createdAt: "asc" },
+    include: {
+      shifts: {
+        where: {
+          date: {
+            gte: todayStart,
+            lte: todayEnd,
+          },
+        },
+        include: {
+          shift: true,
+        },
+      },
+    },
+  });
+
+  // Đếm số ca đã CHECKED_IN trong tháng hiện tại theo từng user
+  const monthlyStats = await prisma.shiftAssignment.groupBy({
+    by: ["userId"],
+    where: {
+      date: { gte: monthStart },
+      status: "CHECKED_IN",
+    },
+    _count: { id: true },
+  });
+
+  const statsMap = new Map(
+    monthlyStats.map((s) => [s.userId, s._count.id])
+  );
+
+  return users.map((user) => {
+    const todayAssignment = user.shifts[0] ?? null;
+
+    let shiftStatus: StaffRow["shiftStatus"] = "nghi-ca";
+    if (todayAssignment) {
+      if (todayAssignment.status === "CHECKED_IN") {
+        shiftStatus = "dang-lam";
+      } else if (todayAssignment.status === "ASSIGNED") {
+        shiftStatus = "chua-check-in";
+      }
+    }
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+      currentShiftName: todayAssignment
+        ? `${todayAssignment.shift.name} ${String(todayAssignment.shift.startTime).padStart(2, "0")}:00–${String(todayAssignment.shift.endTime).padStart(2, "0")}:00`
+        : null,
+      shiftStatus,
+      daysWorked: statsMap.get(user.id) ?? 0,
+      totalDaysInMonth,
+    };
+  });
+}
+
+export async function createStaff(input: CreateStaffInput) {
+  const { name, email, phone, role, password } = input;
+
+  // Kiểm tra email đã tồn tại chưa
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    return { success: false, error: "Email đã được sử dụng" };
+  }
+
+  const hashed = await bcrypt.hash(password ?? "123456", 10);
+
+  await prisma.user.create({
+    data: {
+      name,
+      email,
+      phone,
+      role,
+      password: hashed,
+    },
+  });
+
+  revalidatePath("/staff");
+  return { success: true };
+}
+
+export async function deactivateStaff(userId: string) {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { isActive: false },
+  });
+
+  revalidatePath("/staff");
+  return { success: true };
+}

@@ -12,7 +12,7 @@ async function main() {
     where: { email: "manager@winmart.com" },
     update: {},
     create: {
-      name: "Store Manager",
+      name: "Nguyễn Văn Đạt",
       email: "manager@winmart.com",
       password: hashedPassword,
       role: "MANAGER",
