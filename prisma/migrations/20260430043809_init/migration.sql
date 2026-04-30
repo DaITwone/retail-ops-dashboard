@@ -8,10 +8,16 @@ CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'APPROVED', 'DELIVERING', 'DELIVER
 CREATE TYPE "WasteStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 
 -- CreateEnum
+CREATE TYPE "WasteReason" AS ENUM ('EXPIRED', 'DAMAGED', 'QUALITY_LOSS', 'CUSTOMER_RETURN', 'IMPORT_ERROR', 'OTHER');
+
+-- CreateEnum
 CREATE TYPE "ShiftStatus" AS ENUM ('ASSIGNED', 'CHECKED_IN', 'ABSENT');
 
 -- CreateEnum
 CREATE TYPE "InventoryLogType" AS ENUM ('IMPORT', 'EXPORT', 'WASTE', 'ADJUSTMENT');
+
+-- CreateEnum
+CREATE TYPE "InventoryStatus" AS ENUM ('OK', 'LOW_STOCK', 'OUT_OF_STOCK', 'EXPIRING_SOON');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -21,7 +27,9 @@ CREATE TABLE "User" (
     "password" TEXT NOT NULL,
     "phone" TEXT,
     "role" "Role" NOT NULL DEFAULT 'STAFF',
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -34,9 +42,11 @@ CREATE TABLE "Product" (
     "category" TEXT NOT NULL,
     "unit" TEXT NOT NULL,
     "price" DECIMAL(10,2) NOT NULL,
+    "imageUrl" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "supplierId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Product_pkey" PRIMARY KEY ("id")
 );
@@ -48,6 +58,7 @@ CREATE TABLE "Inventory" (
     "quantity" INTEGER NOT NULL,
     "minStock" INTEGER NOT NULL,
     "expiry" TIMESTAMP(3),
+    "status" "InventoryStatus" NOT NULL DEFAULT 'OK',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -61,6 +72,8 @@ CREATE TABLE "InventoryLog" (
     "type" "InventoryLogType" NOT NULL,
     "quantity" INTEGER NOT NULL,
     "note" TEXT,
+    "orderId" TEXT,
+    "wasteId" TEXT,
     "createdById" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -72,6 +85,8 @@ CREATE TABLE "Supplier" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "contact" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Supplier_pkey" PRIMARY KEY ("id")
 );
@@ -113,8 +128,9 @@ CREATE TABLE "Waste" (
     "approvedById" TEXT,
     "approvedAt" TIMESTAMP(3),
     "status" "WasteStatus" NOT NULL DEFAULT 'PENDING',
-    "reason" TEXT NOT NULL,
+    "reason" "WasteReason" NOT NULL,
     "totalAmount" DECIMAL(12,2) NOT NULL,
+    "note" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -141,6 +157,7 @@ CREATE TABLE "Shift" (
     "endTime" INTEGER NOT NULL,
     "color" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Shift_pkey" PRIMARY KEY ("id")
 );
@@ -151,7 +168,8 @@ CREATE TABLE "ShiftAssignment" (
     "userId" TEXT NOT NULL,
     "shiftId" TEXT NOT NULL,
     "date" TIMESTAMP(3) NOT NULL,
-    "status" "ShiftStatus",
+    "status" "ShiftStatus" NOT NULL DEFAULT 'ASSIGNED',
+    "note" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ShiftAssignment_pkey" PRIMARY KEY ("id")
@@ -163,6 +181,7 @@ CREATE TABLE "SaleRecord" (
     "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "totalAmount" DECIMAL(12,2) NOT NULL,
     "orderCount" INTEGER NOT NULL DEFAULT 0,
+    "createdById" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "SaleRecord_pkey" PRIMARY KEY ("id")
@@ -198,7 +217,13 @@ CREATE UNIQUE INDEX "OrderItem_orderId_productId_key" ON "OrderItem"("orderId", 
 CREATE UNIQUE INDEX "WasteItem_wasteId_productId_key" ON "WasteItem"("wasteId", "productId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Shift_code_key" ON "Shift"("code");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "ShiftAssignment_userId_date_shiftId_key" ON "ShiftAssignment"("userId", "date", "shiftId");
+
+-- CreateIndex
+CREATE INDEX "SaleRecord_date_idx" ON "SaleRecord"("date");
 
 -- AddForeignKey
 ALTER TABLE "Product" ADD CONSTRAINT "Product_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "Supplier"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -208,6 +233,12 @@ ALTER TABLE "Inventory" ADD CONSTRAINT "Inventory_productId_fkey" FOREIGN KEY ("
 
 -- AddForeignKey
 ALTER TABLE "InventoryLog" ADD CONSTRAINT "InventoryLog_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "InventoryLog" ADD CONSTRAINT "InventoryLog_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "InventoryLog" ADD CONSTRAINT "InventoryLog_wasteId_fkey" FOREIGN KEY ("wasteId") REFERENCES "Waste"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "InventoryLog" ADD CONSTRAINT "InventoryLog_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -244,6 +275,9 @@ ALTER TABLE "ShiftAssignment" ADD CONSTRAINT "ShiftAssignment_userId_fkey" FOREI
 
 -- AddForeignKey
 ALTER TABLE "ShiftAssignment" ADD CONSTRAINT "ShiftAssignment_shiftId_fkey" FOREIGN KEY ("shiftId") REFERENCES "Shift"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SaleRecord" ADD CONSTRAINT "SaleRecord_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "SaleItem" ADD CONSTRAINT "SaleItem_saleRecordId_fkey" FOREIGN KEY ("saleRecordId") REFERENCES "SaleRecord"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

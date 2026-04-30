@@ -33,6 +33,16 @@ enum WasteStatus {
   REJECTED
 }
 
+// FIX #4: Đổi Waste.reason từ String sang enum để group report chính xác
+enum WasteReason {
+  EXPIRED        // Hết hạn sử dụng
+  DAMAGED        // Hỏng / Dập nát
+  QUALITY_LOSS   // Mất phẩm chất
+  CUSTOMER_RETURN // Khách trả
+  IMPORT_ERROR   // Lỗi nhập kho
+  OTHER          // Khác
+}
+
 enum ShiftStatus {
   ASSIGNED
   CHECKED_IN
@@ -46,17 +56,30 @@ enum InventoryLogType {
   ADJUSTMENT
 }
 
+// FIX #5: Thêm InventoryStatus để tính toán tập trung ở backend,
+// tránh duplicate logic ở nhiều nơi (dashboard, báo cáo, tồn kho page)
+enum InventoryStatus {
+  OK
+  LOW_STOCK      // Dưới minStock — "Sắp hết"
+  OUT_OF_STOCK   // quantity = 0 — "Hết hàng"
+  EXPIRING_SOON  // Trong vòng 3 ngày tới — "Sắp hết hạn"
+}
+
 // ─────────────────────────────────────────
 // USER
 // ─────────────────────────────────────────
 
 model User {
-  id        String  @id @default(cuid())
-  name      String
-  email     String  @unique
-  password  String
-  phone     String?
-  role      Role    @default(STAFF)
+  id       String  @id @default(cuid())
+  name     String
+  email    String  @unique
+  password String
+  phone    String?
+  role     Role    @default(STAFF)
+
+  // FIX #6: Thêm isActive để vô hiệu hoá tài khoản thay vì xoá
+  // (xoá sẽ break FK với Order, Waste, ShiftAssignment...)
+  isActive Boolean @default(true)
 
   orders         Order[] @relation("CreatedOrders")
   wastes         Waste[] @relation("CreatedWastes")
@@ -65,8 +88,11 @@ model User {
 
   shifts        ShiftAssignment[]
   inventoryLogs InventoryLog[]
+  saleRecords   SaleRecord[]
 
   createdAt DateTime @default(now())
+  // FIX #6: Thêm updatedAt để track thay đổi thông tin nhân viên
+  updatedAt DateTime @updatedAt
 }
 
 // ─────────────────────────────────────────
@@ -81,6 +107,9 @@ model Product {
   unit     String
   price    Decimal @db.Decimal(10, 2)
 
+  // FIX #7: Thêm imageUrl cho ProductThumb ở trang tồn kho
+  imageUrl String?
+
   isActive Boolean @default(true)
 
   supplierId String?
@@ -93,6 +122,7 @@ model Product {
   saleItems     SaleItem[]
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Inventory {
@@ -103,6 +133,10 @@ model Inventory {
   quantity Int
   minStock Int
   expiry   DateTime?
+
+  // FIX #5: status được tính và cập nhật bởi một background job/service,
+  // không nhập tay — đảm bảo nhất quán giữa dashboard, báo cáo, tồn kho page
+  status InventoryStatus @default(OK)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -116,6 +150,14 @@ model InventoryLog {
   type      InventoryLogType
   quantity  Int
   note      String?
+
+  // FIX #3: Thêm FK về Order và Waste để có thể truy vết
+  // "tồn kho giảm lúc 10h vì lý do gì" thay vì chỉ dựa vào note string
+  orderId String?
+  order   Order?  @relation(fields: [orderId], references: [id])
+
+  wasteId String?
+  waste   Waste?  @relation(fields: [wasteId], references: [id])
 
   createdById String
   createdBy   User   @relation(fields: [createdById], references: [id])
@@ -134,6 +176,10 @@ model Supplier {
 
   products Product[]
   orders   Order[]
+
+  // FIX #11: Thêm timestamps để nhất quán với các model khác
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ─────────────────────────────────────────
@@ -142,7 +188,9 @@ model Supplier {
 
 model Order {
   id   String @id @default(cuid())
-  code String @unique // format: PO-20247
+  // FIX #13: code vẫn giữ @unique nhưng phải được generate ở backend service,
+  // không để frontend tự tạo — format: PO-XXXXX (sequential, padded)
+  code String @unique
 
   supplierId String
   supplier   Supplier @relation(fields: [supplierId], references: [id])
@@ -155,14 +203,19 @@ model Order {
   approvedAt   DateTime?
 
   status      OrderStatus @default(PENDING)
-  totalAmount Decimal     @db.Decimal(12, 2)
+
+  // FIX #8: totalAmount là denormalized — phải được tính lại đồng bộ
+  // trong cùng một transaction khi thêm/xoá/sửa OrderItem
+  totalAmount Decimal @db.Decimal(12, 2)
 
   deliveryDate DateTime?
   receivedAt   DateTime?
 
   note String?
 
-  items OrderItem[]
+  items         OrderItem[]
+  // FIX #3: Inventory logs có thể reference về Order này
+  inventoryLogs InventoryLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -178,6 +231,7 @@ model OrderItem {
   product   Product @relation(fields: [productId], references: [id])
 
   quantity Int
+  // price là snapshot tại thời điểm đặt hàng, không phải Product.price hiện tại
   price    Decimal @db.Decimal(10, 2)
 
   @@unique([orderId, productId])
@@ -197,11 +251,19 @@ model Waste {
   approvedBy   User?     @relation("ApprovedWastes", fields: [approvedById], references: [id])
   approvedAt   DateTime?
 
-  status      WasteStatus @default(PENDING)
-  reason      String
-  totalAmount Decimal     @db.Decimal(12, 2)
+  status WasteStatus @default(PENDING)
 
-  items WasteItem[]
+  // FIX #4: Đổi String sang enum để group report không bị lỗi do typo/case
+  reason WasteReason
+
+  // FIX #8: totalAmount phải sync với WasteItem — update trong cùng transaction
+  totalAmount Decimal @db.Decimal(12, 2)
+
+  note String?
+
+  items         WasteItem[]
+  // FIX #3: Inventory logs có thể reference về Waste này
+  inventoryLogs InventoryLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -217,6 +279,7 @@ model WasteItem {
   product   Product @relation(fields: [productId], references: [id])
 
   quantity Int
+  // FIX #3 (naming): đổi tên thành amount để nhất quán với OrderItem và Waste.totalAmount
   amount   Decimal @db.Decimal(10, 2)
 
   @@unique([wasteId, productId])
@@ -227,9 +290,9 @@ model WasteItem {
 // ─────────────────────────────────────────
 
 model Shift {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   name      String
-  code      String @unique
+  code      String  @unique
   startTime Int
   endTime   Int
   color     String?
@@ -237,6 +300,7 @@ model Shift {
   assignments ShiftAssignment[]
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ShiftAssignment {
@@ -248,8 +312,14 @@ model ShiftAssignment {
   shiftId String
   shift   Shift  @relation(fields: [shiftId], references: [id])
 
-  date   DateTime
-  status ShiftStatus?
+  date DateTime
+
+  // FIX #2: Bỏ dấu ? — không để nullable vì null không có nghĩa rõ ràng,
+  // dùng default ASSIGNED thay thế
+  status ShiftStatus @default(ASSIGNED)
+
+  // FIX #12: Thêm note để ghi lý do vắng mặt khi status = ABSENT
+  note String?
 
   createdAt DateTime @default(now())
 
@@ -266,9 +336,16 @@ model SaleRecord {
   totalAmount Decimal  @db.Decimal(12, 2)
   orderCount  Int      @default(0)
 
+  // FIX #1: Thêm createdById — bắt buộc để biết ai tạo/ca nào bán,
+  // cần cho báo cáo doanh thu theo nhân viên và audit trail
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
   items SaleItem[]
 
   createdAt DateTime @default(now())
+  // FIX #10: Thêm index trên date để query doanh thu theo ngày/tuần/tháng nhanh
+  @@index([date])
 }
 
 model SaleItem {
@@ -283,6 +360,8 @@ model SaleItem {
   amount   Decimal @db.Decimal(10, 2)
 }
 
-// npx prisma migrate dev --name 
+// pnpm dlx prisma migrate dev --name init
 
 // pnpm dlx prisma generate
+
+// pnpm prisma migrate reset
