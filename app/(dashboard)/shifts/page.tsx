@@ -42,24 +42,24 @@ const SHIFTS: ShiftDef[] = [
     label: "Ca rau 05–13",
     startHour: 5,
     endHour: 13,
-    color: "rgba(255,255,255,0.85)",
-    border: "#C8C8C8",
-    textColor: "#555",
-    darkBg: "rgba(255,255,255,0.07)",
-    darkBorder: "#555",
-    darkText: "#aaa",
+    color: "rgba(234,243,222,0.9)",   // green-50, rất nhạt
+    border: "#C0DD97",                 // green-100
+    textColor: "#3B6D11",              // green-600
+    darkBg: "rgba(39,80,10,0.15)",
+    darkBorder: "#639922",
+    darkText: "#C0DD97",
   },
   {
     key: "ca-sang",
     label: "Ca sáng 06–14",
     startHour: 6,
     endHour: 14,
-    color: "rgba(255,255,255,0.85)",
-    border: "#C8C8C8",
-    textColor: "#555",
-    darkBg: "rgba(255,255,255,0.07)",
-    darkBorder: "#555",
-    darkText: "#aaa",
+    color: "rgba(192,221,151,0.55)",  // green-100, đậm hơn một bậc
+    border: "#97C459",                 // green-200
+    textColor: "#27500A",              // green-800
+    darkBg: "rgba(39,80,10,0.3)",
+    darkBorder: "#97C459",
+    darkText: "#EAF3DE",
   },
   {
     key: "ca-gay",

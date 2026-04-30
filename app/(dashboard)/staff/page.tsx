@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -17,7 +18,7 @@ import { KpiCard } from "@/components/ui/kpi-card";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Role = "STAFF" | "MANAGER" | "ADMIN";
+type Role = "STAFF" | "MANAGER";
 type ShiftStatus = "dang-lam" | "nghi-ca" | "chua-check-in";
 type TabKey = "all" | "dang-lam" | "nghi";
 
@@ -76,7 +77,7 @@ const MOCK_STAFF: Staff[] = [
     email: "lethihoa@winmart.com",
     phone: "0901234567",
     role: "STAFF",
-    currentShift: "Ca sáng 6:00–14:00",
+    currentShift: null,
     shiftStatus: "dang-lam",
     daysWorked: 14,
     totalDays: 26,
@@ -87,7 +88,7 @@ const MOCK_STAFF: Staff[] = [
     email: "phamquoctuan@winmart.com",
     phone: "0912345678",
     role: "STAFF",
-    currentShift: "Ca chiều 14:00–22:00",
+    currentShift: null,
     shiftStatus: "chua-check-in",
     daysWorked: 10,
     totalDays: 26,
@@ -118,7 +119,6 @@ function RoleTag({ role }: { role: Role }) {
   const map: Record<Role, string> = {
     STAFF:   "border-[#1a6fb5] text-[#1a6fb5] bg-[rgba(26,111,181,0.06)]",
     MANAGER: "border-[#C0392B] text-[#C0392B] bg-[rgba(192,57,43,0.06)]",
-    ADMIN:   "border-[#7B4FC8] text-[#7B4FC8] bg-[rgba(123,79,200,0.06)]",
   };
   return (
     <span className={`inline-block border rounded-[3px] px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${map[role]}`}>
@@ -206,7 +206,6 @@ function CreateModal({ onClose, onSubmit }: {
                   className="appearance-none w-full pl-3 pr-7 py-1.5 text-[13px] border-2 border-(--border-button) rounded outline-none cursor-pointer">
                   <option value="STAFF">STAFF</option>
                   <option value="MANAGER">MANAGER</option>
-                  <option value="ADMIN">ADMIN</option>
                 </select>
                 <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-(--text-muted) pointer-events-none" />
               </div>
@@ -346,7 +345,6 @@ export default function StaffPage() {
             <option value="">Trạng thái</option>
             <option value="STAFF">STAFF</option>
             <option value="MANAGER">MANAGER</option>
-            <option value="ADMIN">ADMIN</option>
           </select>
           <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-(--text-muted) pointer-events-none" />
         </div>

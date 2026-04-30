@@ -229,7 +229,7 @@ model WasteItem {
 model Shift {
   id        String @id @default(cuid())
   name      String
-  code      String
+  code      String @unique
   startTime Int
   endTime   Int
   color     String?
@@ -282,3 +282,7 @@ model SaleItem {
   quantity Int
   amount   Decimal @db.Decimal(10, 2)
 }
+
+// npx prisma migrate dev --name 
+
+// pnpm dlx prisma generate
