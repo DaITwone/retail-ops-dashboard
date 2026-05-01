@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 "use client";
 
-import React, { useState, useMemo, useTransition } from "react";
+import React, { useState, useMemo, useTransition, useEffect } from "react";
 import {
   Search,
   ChevronDown,
@@ -14,16 +14,13 @@ import {
   Mail,
   XCircle,
   Loader2,
+  X,
 } from "lucide-react";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { createStaff, StaffRow } from "./action";
 import { Role } from "@/generated/prisma/enums";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type TabKey = "all" | "dang-lam" | "nghi";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getInitials(name: string) {
   const parts = name.trim().split(" ");
@@ -31,8 +28,6 @@ function getInitials(name: string) {
   const second = parts[parts.length - 2]?.[0] ?? "";
   return (second + last).toUpperCase();
 }
-
-// ─── Sub-components ────────────────────────────────────────────────────────────
 
 function Avatar({ name }: { name: string }) {
   const initials = getInitials(name);
@@ -99,9 +94,20 @@ function CreateModal({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<Role>("STAFF");
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState("123456");
   const [error, setError] = useState("");
+  const [visible, setVisible] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // Trigger slide-in sau khi mount
+  useEffect(() => {
+    requestAnimationFrame(() => setVisible(true));
+  }, []);
+
+  function handleClose() {
+    setVisible(false);
+    setTimeout(onClose, 300);
+  }
 
   function handleSubmit() {
     if (!name || !email || !phone) return;
@@ -116,7 +122,6 @@ function CreateModal({
         password: password || "123456",
       });
       if (result.success) {
-        // Tạo StaffRow tạm để update UI ngay, server sẽ revalidate sau
         const tempRow: StaffRow = {
           id: crypto.randomUUID(),
           name,
@@ -131,37 +136,51 @@ function CreateModal({
           totalDaysInMonth: 26,
         };
         onSuccess(tempRow);
-        onClose();
+        handleClose();
       } else {
         setError(result.error ?? "Có lỗi xảy ra");
       }
     });
   }
 
+  const inputCls =
+    "w-full px-3 py-2 text-[13px] border-2 border-(--border-button) rounded bg-(--bg-table) text-(--text-primary) outline-none focus:border-[#888] transition-colors";
+
+  const labelCls =
+    "block text-[11px] font-semibold text-(--text-muted) uppercase tracking-wide mb-1";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
-      <div className="bg-white border-2 border-(--border-button) rounded-lg shadow-xl w-[480px]">
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={handleClose}
+        style={{ position: "fixed", inset: 0, width: "100vw", height: "100vh" }}
+        className={`z-40 bg-black/20 backdrop-blur-[1px] transition-opacity duration-300 ${
+          visible ? "opacity-100" : "opacity-0"
+        }`}
+      />
+
+      {/* Drawer panel */}
+      <div
+        className={`fixed top-0 right-0 z-50 h-full w-[400px] bg-(--bg-base) border-l border-(--border-button) flex flex-col shadow-xl transition-transform duration-300 ease-out ${
+          visible ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-(--border-button)">
-          <div>
-            <h2 className="text-[14px] font-bold text-(--text-primary)">
-              TẠO TÀI KHOẢN
-            </h2>
-            <p className="text-[11px] text-(--text-muted) mt-0.5">
-              Thêm nhân viên mới vào hệ thống · mật khẩu mặc định:{" "}
-              <span className="font-mono font-semibold">123456</span>
-            </p>
-          </div>
+        <div className="flex items-center justify-between p-3.5 border-b border-(--border-button) bg-(--bg-table)">
+          <h2 className="text-[13px] font-bold text-(--text-secondary) uppercase tracking-wide">
+            Tạo tài khoản nhân viên
+          </h2>
           <button
-            onClick={onClose}
-            className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer"
+            onClick={handleClose}
+            className="text-(--text-muted) border-2 border-(--border-sidebar) p-1 rounded hover:text-(--text-primary) cursor-pointer mt-0.5"
           >
-            <XCircle size={16} />
+            <X size={14} />{" "}
           </button>
         </div>
 
-        {/* Body */}
-        <div className="px-5 py-4 space-y-3">
+        {/* Body — scrollable */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
           {error && (
             <div className="px-3 py-2 rounded bg-red-50 border border-red-200 text-[12px] text-red-600">
               {error}
@@ -169,118 +188,106 @@ function CreateModal({
           )}
 
           <div>
-            <label className="block text-[11px] font-semibold text-(--text-muted) uppercase mb-1">
-              Họ tên *
-            </label>
+            <label className={labelCls}>Họ và tên</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Nguyễn Văn A"
-              className="w-full px-3 py-1.5 text-[13px] border-2 border-(--border-button) rounded outline-none focus:border-[#888]"
+              className={inputCls}
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-(--text-muted) uppercase mb-1">
-              Email *
-            </label>
-            <div className="relative">
-              <Mail
-                size={12}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-(--text-muted)"
-              />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@winmart.com"
-                className="w-full pl-7 pr-3 py-1.5 text-[13px] border-2 border-(--border-button) rounded outline-none focus:border-[#888]"
-              />
-            </div>
+            <label className={labelCls}>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputCls}
+            />
+          </div>
+
+          <div>
+            <label className={labelCls}>Số điện thoại</label>
+            <input
+              type="text"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className={inputCls}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-(--text-muted) uppercase mb-1">
-                Số điện thoại *
-              </label>
-              <div className="relative">
-                <Phone
-                  size={12}
-                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-(--text-muted)"
-                />
-                <input
-                  type="text"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="09xxxxxxxx"
-                  className="w-full pl-7 pr-3 py-1.5 text-[13px] border-2 border-(--border-button) rounded outline-none focus:border-[#888]"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-(--text-muted) uppercase mb-1">
-                Role
-              </label>
+              <label className={labelCls}>Role</label>
               <div className="relative">
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as Role)}
-                  className="appearance-none w-full pl-3 pr-7 py-1.5 text-[13px] border-2 border-(--border-button) rounded outline-none cursor-pointer"
+                  className={`appearance-none ${inputCls} pr-7 cursor-pointer`}
                 >
-                  <option value="STAFF">STAFF</option>
-                  <option value="MANAGER">MANAGER</option>
+                  <option value="STAFF">staff</option>
+                  <option value="MANAGER">manager</option>
                 </select>
                 <ChevronDown
                   size={12}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-(--text-muted) pointer-events-none"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-(--text-muted) pointer-events-none"
+                />
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>Chức vụ</label>
+              <div className="relative">
+                <select
+                  className={`appearance-none ${inputCls} pr-7 cursor-pointer`}
+                >
+                  <option>Nhân Viên Bán Hàng</option>
+                  <option>Nhân Viên Thử Việc</option>
+                  <option>Cửa Hàng Phó</option>
+                  <option>Cửa Hàng Trưởng</option>
+                </select>
+                <ChevronDown
+                  size={12}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-(--text-muted) pointer-events-none"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-(--text-muted) uppercase mb-1">
-              Mật khẩu{" "}
-              <span className="font-normal normal-case">
-                (để trống = dùng 123456)
-              </span>
-            </label>
+            <label className={labelCls}>Mật khẩu tạm</label>
             <input
-              type="password"
+              type="text"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-3 py-1.5 text-[13px] border-2 border-(--border-button) rounded outline-none focus:border-[#888]"
+              className={inputCls}
             />
+            <p className="mt-1.5 text-[11px] text-(--text-muted)">
+              Người dùng sẽ bị bắt buộc đổi mật khẩu khi đăng nhập lần đầu.
+            </p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-(--border-button)">
+        <div className="flex items-center gap-2 px-5 py-4 border-t border-(--border-button)">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             disabled={isPending}
-            className="px-4 py-1.5 text-[13px] border-2 border-(--border-button) text-(--text-secondary) rounded hover:bg-(--bg-button) transition-colors cursor-pointer disabled:opacity-40"
+            className="flex-1 py-2 text-[13px] border border-(--border-button) text-(--text-secondary) rounded hover:bg-(--bg-button) transition-colors cursor-pointer disabled:opacity-40"
           >
-            Hủy bỏ
+            Hủy
           </button>
           <button
             onClick={handleSubmit}
             disabled={!name || !email || !phone || isPending}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-[13px] font-semibold bg-[#C0392B] text-white rounded hover:bg-[#a93226] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[13px] font-bold bg-[#C0392B] text-white rounded hover:bg-[#a93226] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed uppercase tracking-wide"
           >
-            {isPending ? (
-              <Loader2 size={13} className="animate-spin" />
-            ) : (
-              <Plus size={13} />
-            )}
+            {isPending && <Loader2 size={13} className="animate-spin" />}
             {isPending ? "Đang tạo..." : "Tạo tài khoản"}
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
