@@ -11,6 +11,7 @@ export type StaffRow = {
   email: string;
   phone: string | null;
   role: Role;
+  position: "SALES_STAFF" | "INTERN" | "ASSISTANT_MANAGER" | "STORE_MANAGER";
   isActive: boolean;
   createdAt: Date;
   // Tính từ ShiftAssignment của hôm nay
@@ -26,6 +27,7 @@ export type CreateStaffInput = {
   email: string;
   phone: string;
   role: Role;
+  position: "SALES_STAFF" | "INTERN" | "ASSISTANT_MANAGER" | "STORE_MANAGER";
   password?: string;
 };
 
@@ -85,9 +87,7 @@ export async function getStaffList(): Promise<StaffRow[]> {
     _count: { id: true },
   });
 
-  const statsMap = new Map(
-    monthlyStats.map((s) => [s.userId, s._count.id])
-  );
+  const statsMap = new Map(monthlyStats.map((s) => [s.userId, s._count.id]));
 
   return users.map((user) => {
     const todayAssignment = user.shifts[0] ?? null;
@@ -107,6 +107,7 @@ export async function getStaffList(): Promise<StaffRow[]> {
       email: user.email,
       phone: user.phone,
       role: user.role,
+      position: user.position,
       isActive: user.isActive,
       createdAt: user.createdAt,
       currentShiftName: todayAssignment
@@ -120,7 +121,7 @@ export async function getStaffList(): Promise<StaffRow[]> {
 }
 
 export async function createStaff(input: CreateStaffInput) {
-  const { name, email, phone, role, password } = input;
+  const { name, email, phone, role, position, password } = input;
 
   // Kiểm tra email đã tồn tại chưa
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -136,6 +137,7 @@ export async function createStaff(input: CreateStaffInput) {
       email,
       phone,
       role,
+      position,
       password: hashed,
     },
   });

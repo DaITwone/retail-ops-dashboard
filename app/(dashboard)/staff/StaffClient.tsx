@@ -10,9 +10,6 @@ import {
   UserCheck,
   UserX,
   Clock,
-  Phone,
-  Mail,
-  XCircle,
   Loader2,
   X,
 } from "lucide-react";
@@ -98,6 +95,9 @@ function CreateModal({
   const [error, setError] = useState("");
   const [visible, setVisible] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [position, setPosition] = useState<
+    "SALES_STAFF" | "INTERN" | "ASSISTANT_MANAGER" | "STORE_MANAGER"
+  >("SALES_STAFF");
 
   // Trigger slide-in sau khi mount
   useEffect(() => {
@@ -119,6 +119,7 @@ function CreateModal({
         email,
         phone,
         role,
+        position,
         password: password || "123456",
       });
       if (result.success) {
@@ -128,6 +129,7 @@ function CreateModal({
           email,
           phone,
           role,
+          position,
           isActive: true,
           createdAt: new Date(),
           currentShiftName: null,
@@ -239,12 +241,14 @@ function CreateModal({
               <label className={labelCls}>Chức vụ</label>
               <div className="relative">
                 <select
+                  value={position}
+                  onChange={(e) => setPosition(e.target.value as typeof position)}
                   className={`appearance-none ${inputCls} pr-7 cursor-pointer`}
                 >
-                  <option>Nhân Viên Bán Hàng</option>
-                  <option>Nhân Viên Thử Việc</option>
-                  <option>Cửa Hàng Phó</option>
-                  <option>Cửa Hàng Trưởng</option>
+                  <option value="SALES_STAFF">Nhân Viên Bán Hàng</option>
+                  <option value="INTERN">Nhân Viên Thử Việc</option>
+                  <option value="ASSISTANT_MANAGER">Cửa Hàng Phó</option>
+                  <option value="STORE_MANAGER">Cửa Hàng Trưởng</option>
                 </select>
                 <ChevronDown
                   size={12}
@@ -369,6 +373,13 @@ export default function StaffClient({
     { key: "dang-lam", label: "Đang làm" },
     { key: "nghi", label: "Nghỉ" },
   ];
+
+  const POSITION_LABEL = {
+    SALES_STAFF: "Nhân viên bán hàng",
+    INTERN: "Nhân viên thử việc",
+    ASSISTANT_MANAGER: "Cửa hàng phó",
+    STORE_MANAGER: "Cửa hàng trưởng",
+  };
 
   return (
     <div className="p-6 space-y-6 bg-(--bg-base) min-h-screen">
@@ -510,6 +521,9 @@ export default function StaffClient({
                 Role
               </th>
               <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-(--text-muted) uppercase tracking-wide">
+                Chức vụ
+              </th>
+              <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-(--text-muted) uppercase tracking-wide">
                 Ca hiện tại
               </th>
               <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-(--text-muted) uppercase tracking-wide">
@@ -555,6 +569,8 @@ export default function StaffClient({
                 <td className="px-3 py-3">
                   <RoleTag role={staff.role} />
                 </td>
+
+                <td className="px-3 py-3 text-(--text-secondary)">{POSITION_LABEL[staff.position]}</td>
 
                 <td className="px-3 py-3">
                   {staff.currentShiftName ? (

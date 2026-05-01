@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "Position" AS ENUM ('SALES_STAFF', 'INTERN', 'ASSISTANT_MANAGER', 'STORE_MANAGER');
+
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "position" "Position" NOT NULL DEFAULT 'SALES_STAFF';

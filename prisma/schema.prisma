@@ -19,6 +19,13 @@ enum Role {
   STAFF
 }
 
+enum Position {
+  SALES_STAFF        // Nhân viên bán hàng
+  INTERN             // Nhân viên thử việc
+  ASSISTANT_MANAGER  // Cửa hàng phó
+  STORE_MANAGER      // Cửa hàng trưởng
+}
+
 enum OrderStatus {
   PENDING
   APPROVED
@@ -76,6 +83,7 @@ model User {
   password String
   phone    String?
   role     Role    @default(STAFF)
+  position Position @default(SALES_STAFF)
 
   // FIX #6: Thêm isActive để vô hiệu hoá tài khoản thay vì xoá
   // (xoá sẽ break FK với Order, Waste, ShiftAssignment...)
