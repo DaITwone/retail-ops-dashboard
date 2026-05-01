@@ -530,9 +530,6 @@ export default function StaffClient({
                 Trạng thái
               </th>
               <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-(--text-muted) uppercase tracking-wide">
-                Ngày làm
-              </th>
-              <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-(--text-muted) uppercase tracking-wide">
                 Điện thoại
               </th>
             </tr>
@@ -584,16 +581,6 @@ export default function StaffClient({
 
                 <td className="px-3 py-3">
                   <ShiftTag status={staff.shiftStatus} />
-                </td>
-
-                <td className="px-3 py-3">
-                  <span className="text-[13px] font-mono text-(--text-primary)">
-                    {staff.daysWorked}
-                    <span className="text-(--text-muted)">
-                      {" "}
-                      / {staff.totalDaysInMonth}
-                    </span>
-                  </span>
                 </td>
 
                 <td className="px-3 py-3">
