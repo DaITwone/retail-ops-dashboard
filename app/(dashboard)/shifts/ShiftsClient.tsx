@@ -22,7 +22,15 @@ import {
 
 type ViewMode = "ngay" | "tuan" | "thang";
 
-const DAY_LABELS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+const DAY_LABELS = [
+  "Thứ 2",
+  "Thứ 3",
+  "Thứ 4",
+  "Thứ 5",
+  "Thứ 6",
+  "Thứ 7",
+  "Chủ nhật",
+];
 const MONTHS = [
   "Tháng 1",
   "Tháng 2",
@@ -85,9 +93,10 @@ export default function ShiftsClient({
     initialData.assignments,
   );
   const [activeShift, setActiveShift] = useState<string | null>(null);
-  const [modal, setModal] = useState<{ dateKey: string; shiftKey: string } | null>(
-    null,
-  );
+  const [modal, setModal] = useState<{
+    dateKey: string;
+    shiftKey: string;
+  } | null>(null);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -149,7 +158,8 @@ export default function ShiftsClient({
   function navigate(dir: -1 | 1) {
     if (viewMode === "ngay") setCurrentDate((d) => addDays(d, dir));
     else if (viewMode === "tuan") setCurrentDate((d) => addDays(d, dir * 7));
-    else setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + dir, 1));
+    else
+      setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + dir, 1));
   }
 
   function getAssignments(dateKey: string, shiftKey: string) {
@@ -204,7 +214,10 @@ export default function ShiftsClient({
     const todayKey = formatDateKey(new Date());
 
     return (
-      <div className="overflow-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
+      <div
+        className="overflow-auto"
+        style={{ maxHeight: "calc(100vh - 220px)" }}
+      >
         <table className="w-full border-collapse" style={{ minWidth: 720 }}>
           <thead>
             <tr>
@@ -303,7 +316,10 @@ export default function ShiftsClient({
     const currMonth = currentDate.getMonth();
 
     return (
-      <div className="overflow-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
+      <div
+        className="overflow-auto"
+        style={{ maxHeight: "calc(100vh - 220px)" }}
+      >
         <table className="w-full border-collapse">
           <thead>
             <tr>
@@ -331,8 +347,12 @@ export default function ShiftsClient({
                   const dk = formatDateKey(day);
                   const isToday = dk === todayKey;
                   const inMonth = day.getMonth() === currMonth;
-                  const dayAssignments = assignments.filter((a) => a.dateKey === dk);
-                  const uniqueShifts = [...new Set(dayAssignments.map((a) => a.shiftKey))];
+                  const dayAssignments = assignments.filter(
+                    (a) => a.dateKey === dk,
+                  );
+                  const uniqueShifts = [
+                    ...new Set(dayAssignments.map((a) => a.shiftKey)),
+                  ];
 
                   return (
                     <td
@@ -342,7 +362,9 @@ export default function ShiftsClient({
                         verticalAlign: "top",
                         padding: 6,
                         height: 120,
-                        background: inMonth ? "transparent" : "rgba(0,0,0,0.02)",
+                        background: inMonth
+                          ? "transparent"
+                          : "rgba(0,0,0,0.02)",
                       }}
                     >
                       <div
@@ -361,7 +383,9 @@ export default function ShiftsClient({
                         {uniqueShifts.slice(0, 3).map((sk) => {
                           const shift = shiftMap[sk];
                           if (!shift) return null;
-                          const count = dayAssignments.filter((a) => a.shiftKey === sk).length;
+                          const count = dayAssignments.filter(
+                            (a) => a.shiftKey === sk,
+                          ).length;
                           return (
                             <button
                               key={sk}
@@ -378,7 +402,10 @@ export default function ShiftsClient({
                           );
                         })}
                         {uniqueShifts.length > 3 && (
-                          <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                          <div
+                            className="text-[10px]"
+                            style={{ color: "var(--text-muted)" }}
+                          >
                             +{uniqueShifts.length - 3} ca khác
                           </div>
                         )}
@@ -406,15 +433,17 @@ export default function ShiftsClient({
       <div className="mb-4">
         <div className="flex items-center gap-2">
           <h1 className="text-md font-bold">LỊCH LÀM VIỆC</h1>
-          {isLoadingRange && <Loader2 size={13} className="animate-spin text-(--text-muted)" />}
+          {isLoadingRange && (
+            <Loader2 size={13} className="animate-spin text-(--text-muted)" />
+          )}
         </div>
-        <p className="mt-0.5 text-[12px]" style={{ color: "var(--text-muted)" }}>
-          Dữ liệu ca và phân công đang được đọc trực tiếp từ database.
-        </p>
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="flex overflow-hidden rounded" style={{ border: "2px solid var(--border-button)" }}>
+        <div
+          className="flex overflow-hidden rounded"
+          style={{ border: "2px solid var(--border-button)" }}
+        >
           {(["ngay", "tuan", "thang"] as ViewMode[]).map((v) => (
             <button
               key={v}
@@ -423,7 +452,8 @@ export default function ShiftsClient({
               style={{
                 background: viewMode === v ? "#ef4444" : "var(--bg-base)",
                 color: viewMode === v ? "#fff" : "var(--text-secondary)",
-                borderRight: v !== "thang" ? "1px solid var(--border-button)" : "none",
+                borderRight:
+                  v !== "thang" ? "1px solid var(--border-button)" : "none",
               }}
             >
               {v === "ngay" ? "Ngày" : v === "tuan" ? "Tuần" : "Tháng"}
@@ -487,20 +517,26 @@ export default function ShiftsClient({
         {shifts.map((shift) => (
           <button
             key={shift.key}
-            onClick={() => setActiveShift(activeShift === shift.key ? null : shift.key)}
+            onClick={() =>
+              setActiveShift(activeShift === shift.key ? null : shift.key)
+            }
             className="flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-0.5 text-[11px]"
             style={{
               border:
                 activeShift === shift.key
                   ? `1.5px solid ${shift.border}`
                   : "1.5px solid transparent",
-              background: activeShift === shift.key ? shift.color : "transparent",
+              background:
+                activeShift === shift.key ? shift.color : "transparent",
               color: "var(--text-secondary)",
             }}
           >
             <span
               className="inline-block h-3 w-3 flex-shrink-0 rounded-sm"
-              style={{ background: shift.color, border: `1.5px solid ${shift.border}` }}
+              style={{
+                background: shift.color,
+                border: `1.5px solid ${shift.border}`,
+              }}
             />
             {shift.label}
           </button>
@@ -512,7 +548,10 @@ export default function ShiftsClient({
         )}
       </div>
 
-      <div className="overflow-hidden rounded" style={{ border: "2px solid var(--border-button)" }}>
+      <div
+        className="overflow-hidden rounded"
+        style={{ border: "2px solid var(--border-button)" }}
+      >
         {viewMode === "ngay" && renderWeek([currentDate])}
         {viewMode === "tuan" && renderWeek(weekDays)}
         {viewMode === "thang" && renderMonth()}
@@ -526,17 +565,26 @@ export default function ShiftsClient({
         >
           <div
             className="w-[360px] rounded-lg p-5 shadow-xl"
-            style={{ background: "var(--bg-base)", border: "2px solid var(--border-button)" }}
+            style={{
+              background: "var(--bg-base)",
+              border: "2px solid var(--border-button)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-start justify-between">
               <div>
                 <div className="text-[13px] font-bold">Gán ca nhân viên</div>
-                <div className="mt-0.5 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                <div
+                  className="mt-0.5 text-[11px]"
+                  style={{ color: "var(--text-muted)" }}
+                >
                   {shiftMap[modal.shiftKey]?.label} · {modal.dateKey}
                 </div>
               </div>
-              <button onClick={() => setModal(null)} style={{ color: "var(--text-muted)" }}>
+              <button
+                onClick={() => setModal(null)}
+                style={{ color: "var(--text-muted)" }}
+              >
                 <X size={16} />
               </button>
             </div>
@@ -572,7 +620,10 @@ export default function ShiftsClient({
                 </div>
               ))}
               {modalAssignments.length === 0 && (
-                <div className="py-2 text-center text-[12px]" style={{ color: "var(--text-muted)" }}>
+                <div
+                  className="py-2 text-center text-[12px]"
+                  style={{ color: "var(--text-muted)" }}
+                >
                   Chưa có nhân viên nào được gán
                 </div>
               )}
@@ -582,7 +633,7 @@ export default function ShiftsClient({
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
-                className="flex-1 rounded px-2.5 py-1.5 text-[12px] outline-none"
+                className="flex-1 min-w-0 rounded px-2.5 py-1.5 text-[12px] outline-none"
                 style={{
                   border: "2px solid var(--border-button)",
                   background: "var(--bg-base)",
@@ -592,7 +643,7 @@ export default function ShiftsClient({
                 <option value="">Chọn nhân viên...</option>
                 {staff.map((member) => (
                   <option key={member.id} value={member.id}>
-                    {member.name} · {member.email}
+                    {member.name}
                   </option>
                 ))}
               </select>
@@ -602,7 +653,11 @@ export default function ShiftsClient({
                 className="flex cursor-pointer items-center gap-1 rounded px-3 py-1.5 text-[12px] font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                 style={{ background: "#ef4444", color: "#fff" }}
               >
-                {isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                {isPending ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <Plus size={13} />
+                )}
                 Thêm
               </button>
             </div>
@@ -640,8 +695,14 @@ function ShiftSlot({
       {hasStaff ? (
         <div className="space-y-0.5">
           {assignments.map((assignment) => (
-            <div key={assignment.id} className="flex items-center justify-between gap-1">
-              <span className="truncate text-[11px] font-medium" style={{ color: shift.textColor }}>
+            <div
+              key={assignment.id}
+              className="flex items-center justify-between gap-1"
+            >
+              <span
+                className="truncate text-[11px] font-medium"
+                style={{ color: shift.textColor }}
+              >
                 {assignment.staffName}
               </span>
               <button
@@ -657,7 +718,10 @@ function ShiftSlot({
               </button>
             </div>
           ))}
-          <div className="mt-0.5 text-[10px] opacity-60" style={{ color: shift.textColor }}>
+          <div
+            className="mt-0.5 text-[10px] opacity-60"
+            style={{ color: shift.textColor }}
+          >
             + {shift.label}
           </div>
         </div>

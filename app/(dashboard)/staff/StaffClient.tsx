@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 "use client";
 
@@ -14,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { KpiCard } from "@/components/ui/kpi-card";
-import { createStaff, StaffRow } from "./action";
+import { createStaff, getStaffDetail, StaffRow } from "./action";
 import { Role } from "@/generated/prisma/enums";
 
 type TabKey = "all" | "dang-lam" | "nghi";
@@ -242,7 +243,9 @@ function CreateModal({
               <div className="relative">
                 <select
                   value={position}
-                  onChange={(e) => setPosition(e.target.value as typeof position)}
+                  onChange={(e) =>
+                    setPosition(e.target.value as typeof position)
+                  }
                   className={`appearance-none ${inputCls} pr-7 cursor-pointer`}
                 >
                   <option value="SALES_STAFF">Nhân Viên Bán Hàng</option>
@@ -295,6 +298,290 @@ function CreateModal({
   );
 }
 
+function StaffDetailModal({
+  data,
+  onClose,
+}: {
+  data: any;
+  onClose: () => void;
+}) {
+  const [visible, setVisible] = useState(false);
+  const [localData, setLocalData] = useState(data);
+
+  useEffect(() => {
+    requestAnimationFrame(() => setVisible(true));
+  }, []);
+
+  function handleClose() {
+    setVisible(false);
+    setTimeout(onClose, 300);
+  }
+
+  if (!data) return null;
+
+  const roleColor =
+    localData.role === "MANAGER"
+      ? "border border-red-400 text-red-500"
+      : "border border-blue-400 text-blue-500";
+
+  const statusColor = "border border-gray-400 text-gray-500";
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={handleClose}
+        style={{ position: "fixed", inset: 0, width: "100vw", height: "100vh" }}
+        className={`z-40 bg-black/20 backdrop-blur-[1px] transition-opacity duration-300 ${
+          visible ? "opacity-100" : "opacity-0"
+        }`}
+      />
+
+      {/* Drawer */}
+      <div
+        className={`fixed top-0 right-0 z-50 h-full w-[395px] flex flex-col shadow-xl transition-transform duration-300 ${
+          visible ? "translate-x-0" : "translate-x-full"
+        }`}
+        style={{ background: "var(--bg-base)", borderLeft: "1px solid var(--border-button)" }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-4 py-3.5 border-b"
+          style={{
+            background: "var(--bg-table)",
+            borderColor: "var(--border-button)",
+          }}
+        >
+          <span
+            className="text-[11px] font-semibold tracking-widest uppercase"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            Thông tin nhân viên
+          </span>
+          <button
+            onClick={handleClose}
+            className="text-(--text-muted) border-2 border-(--border-sidebar) p-1 rounded hover:text-(--text-primary) cursor-pointer mt-0.5"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            <X size={13} />
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Employee card */}
+          <div
+            className="mx-3 mt-3 rounded border p-3 flex items-center gap-3"
+            style={{
+              borderColor: "var(--color-info)",
+              background: "rgba(58,123,212,0.06)",
+            }}
+          >
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0"
+              style={{ background: "#6b7a8d" }}
+            >
+              {localData.initials || localData.name?.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-[13px] truncate">{localData.name}</div>
+              <div className="text-[11px] truncate" style={{ color: "var(--text-muted)" }}>
+                {localData.email}
+              </div>
+              <div className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                {localData.phone}
+              </div>
+            </div>
+            <div className="flex flex-col gap-1 flex-shrink-0">
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded font-medium ${roleColor}`}
+                style={{ background: "var(--bg-base)" }}
+              >
+                {localData.role}
+              </span>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded font-medium ${statusColor}`}
+                style={{ background: "var(--bg-base)" }}
+              >
+                {localData.shiftStatus || "NGHỈ CA"}
+              </span>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="mx-3 mt-3 bg-(--bg-table) p-3 border-2 border-(--border-button) border-dashed rounded">
+            <div
+              className="text-[10px] font-semibold tracking-widest uppercase mb-2"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Thống kê tháng này
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "Đi làm", value: localData.stats?.daysWorked ?? 0, color: "var(--color-success)" },
+                { label: "Còn lại", value: localData.stats?.remaining ?? 26, color: "var(--text-primary)" },
+                { label: "Nghỉ phép", value: localData.stats?.leaveUsed ?? 5, color: "var(--color-warning)" },
+              ].map(({ label, value, color }) => (
+                <div
+                  key={label}
+                  className="rounded border text-center py-2"
+                  style={{ borderColor: "var(--border-button)", background: "var(--bg-button)" }}
+                >
+                  <div className="text-[15px] font-bold" style={{ color }}>
+                    {value}
+                  </div>
+                  <div className="text-[10px] mt-0.5" style={{ color: "var(--text-muted)" }}>
+                    {label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Personal Info */}
+          <div className="mx-3 mt-4">
+            <div
+              className="text-[10px] font-semibold tracking-widest uppercase mb-2"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Thông tin cá nhân
+            </div>
+            <div className="space-y-2">
+              {/* Name */}
+              <input
+                className="w-full rounded border-2 border-(--border-button) px-3 py-2 text-[12px] outline-none focus:border-blue-400"
+                style={{
+                  borderColor: "var(--border-button)",
+                  background: "var(--bg-button)",
+                  color: "var(--text-primary)",
+                }}
+                value={localData.name}
+                onChange={(e) => setLocalData({ ...localData, name: e.target.value })}
+              />
+              {/* Phone */}
+              <input
+                className="w-full rounded border-2 border-(--border-button) px-3 py-2 text-[12px] outline-none focus:border-blue-400"
+                style={{
+                  borderColor: "var(--border-button)",
+                  background: "var(--bg-button)",
+                  color: "var(--text-primary)",
+                }}
+                value={localData.phone}
+                onChange={(e) => setLocalData({ ...localData, phone: e.target.value })}
+              />
+              {/* Email */}
+              <input
+                className="w-full rounded border-2 border-(--border-button) px-3 py-2 text-[12px] outline-none focus:border-blue-400"
+                style={{
+                  borderColor: "var(--border-button)",
+                  background: "var(--bg-button)",
+                  color: "var(--text-primary)",
+                }}
+                value={localData.email}
+                onChange={(e) => setLocalData({ ...localData, email: e.target.value })}
+              />
+              {/* Role + Position row */}
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  className="w-full rounded border-2 border-(--border-button) px-2 py-2 text-[12px] outline-none focus:border-blue-400 appearance-none"
+                  style={{
+                    borderColor: "var(--border-button)",
+                    background: "var(--bg-button)",
+                    color: "var(--text-primary)",
+                  }}
+                  value={localData.role?.toLowerCase() || "staff"}
+                  onChange={(e) => setLocalData({ ...localData, role: e.target.value.toUpperCase() })}
+                >
+                  <option value="staff">staff</option>
+                  <option value="manager">manager</option>
+                </select>
+                <select
+                  className="w-full rounded border-2 border-(--border-button) px-2 py-2 text-[12px] outline-none focus:border-blue-400 appearance-none"
+                  style={{
+                    borderColor: "var(--border-button)",
+                    background: "var(--bg-button)",
+                    color: "var(--text-primary)",
+                  }}
+                  value={localData.position || "Nhân Viên Bán Hàng"}
+                  onChange={(e) => setLocalData({ ...localData, position: e.target.value })}
+                >
+                  <option value="Nhân Viên Bán Hàng">Nhân Viên Bán Hàng</option>
+                  <option value="Quản Lý Cửa Hàng">Quản Lý Cửa Hàng</option>
+                  <option value="Kho">Kho</option>
+                  <option value="Thu Ngân">Thu Ngân</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Attendance */}
+          <div className="mx-3 mt-4 mb-3">
+            <div
+              className="text-[10px] font-semibold tracking-widest uppercase mb-2"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Lịch sử chấm công gần đây
+            </div>
+            <div className="space-y-2">
+              {(localData.recentShifts || []).map((s: any, i: number) => (
+                <div
+                  key={i}
+                  className="rounded border-2 border-(--border-button) px-3 py-2 flex items-start justify-between"
+                  style={{ borderColor: "var(--border-button)", background: "var(--bg-button)" }}
+                >
+                  <div>
+                    <div className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                      {new Date(s.date).toLocaleDateString("vi-VN", {
+                        day: "numeric",
+                        month: "numeric",
+                        year: "numeric",
+                      })}
+                    </div>
+                    <div className="text-[12px] mt-0.5" style={{ color: "var(--text-primary)" }}>
+                      {s.shiftName} · IN - · OUT -
+                    </div>
+                  </div>
+                  <span
+                    className="text-[10px] px-2 py-0.5 rounded border mt-0.5 flex-shrink-0"
+                    style={{
+                      borderColor: "var(--color-success)",
+                      color: "var(--color-success)",
+                      background: "rgba(58,158,106,0.08)",
+                    }}
+                  >
+                    HOÀN THÀNH
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div
+          className="px-3 py-3 flex gap-2 border-t"
+          style={{ borderColor: "var(--border-button)", background: "var(--bg-base)" }}
+        >
+          <button
+            onClick={handleClose}
+            className="flex-1 rounded border py-2 text-[12px] font-medium transition-colors hover:bg-gray-100"
+            style={{ borderColor: "var(--border-button)", color: "var(--text-primary)" }}
+          >
+            Hủy
+          </button>
+          <button
+            className="flex-1 rounded py-2 text-[12px] font-medium text-white transition-colors"
+            style={{ background: "var(--color-info)" }}
+            onClick={() => handleClose()}
+          >
+            Lưu thay đổi
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Main Client Component ─────────────────────────────────────────────────────
 
 export default function StaffClient({
@@ -310,6 +597,9 @@ export default function StaffClient({
   const [showModal, setShowModal] = useState(false);
   // Optimistic list — server revalidate sẽ sync lại sau
   const [staffList, setStaffList] = useState<StaffRow[]>(initialData);
+
+  const [selectedStaff, setSelectedStaff] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   // ── KPIs ──
   const kpiTotal = staffList.length;
@@ -387,6 +677,13 @@ export default function StaffClient({
         <CreateModal
           onClose={() => setShowModal(false)}
           onSuccess={(newStaff) => setStaffList((prev) => [...prev, newStaff])}
+        />
+      )}
+
+      {showDetailModal && selectedStaff && (
+        <StaffDetailModal
+          data={selectedStaff}
+          onClose={() => setShowDetailModal(false)}
         />
       )}
 
@@ -538,7 +835,12 @@ export default function StaffClient({
             {data.map((staff) => (
               <tr
                 key={staff.id}
-                className="border-t border-[#F0EDE8] hover:bg-[rgba(245,242,237,0.6)] transition-colors"
+                onClick={async () => {
+                  const data = await getStaffDetail(staff.id);
+                  setSelectedStaff(data);
+                  setShowDetailModal(true);
+                }}
+                className="border-t border-[#F0EDE8] hover:bg-(--bg-table) transition-colors"
               >
                 <td className="px-3 py-3">
                   <input
@@ -567,7 +869,9 @@ export default function StaffClient({
                   <RoleTag role={staff.role} />
                 </td>
 
-                <td className="px-3 py-3 text-(--text-secondary)">{POSITION_LABEL[staff.position]}</td>
+                <td className="px-3 py-3 text-(--text-secondary)">
+                  {POSITION_LABEL[staff.position]}
+                </td>
 
                 <td className="px-3 py-3">
                   {staff.currentShiftName ? (

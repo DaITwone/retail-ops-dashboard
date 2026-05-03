@@ -42,6 +42,10 @@ function getStartOfDay(date: Date) {
   return d;
 }
 
+/**
+ * Bắt đầu: 00:00:00.000
+ * Kết thúc: 23:59:59.999
+ */
 function getEndOfDay(date: Date) {
   const d = new Date(date);
   d.setHours(23, 59, 59, 999);
@@ -77,7 +81,9 @@ export async function getStaffList(): Promise<StaffRow[]> {
     },
   });
 
-  // Đếm số ca đã CHECKED_IN trong tháng hiện tại theo từng user
+  // console.log("USERS:", JSON.stringify(users, null, 2)); Full nested data.
+
+  // Đếm cho từng user đã làm bao nhiêu ca trong tháng hiện tại
   const monthlyStats = await prisma.shiftAssignment.groupBy({
     by: ["userId"],
     where: {
@@ -86,6 +92,8 @@ export async function getStaffList(): Promise<StaffRow[]> {
     },
     _count: { id: true },
   });
+
+  // console.log("MONTHLY STATS:", JSON.stringify(monthlyStats, null, 2)); 
 
   const statsMap = new Map(monthlyStats.map((s) => [s.userId, s._count.id]));
 
@@ -154,4 +162,53 @@ export async function deactivateStaff(userId: string) {
 
   revalidatePath("/staff");
   return { success: true };
+}
+
+export async function getStaffDetail(userId: string) {
+  const now = new Date();
+  const monthStart = getStartOfMonth(now);
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      shifts: {
+        orderBy: { date: "desc" },
+        include: {
+          shift: true,
+        },
+      },
+    },
+  });
+
+  if (!user) return null;
+
+  // Đếm số ca đã CHECKED_IN trong tháng hiện tại
+  const workedCount = await prisma.shiftAssignment.count({
+    where: {
+      userId,
+      date: { gte: monthStart },
+      status: "CHECKED_IN",
+    },
+  });
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+    position: user.position,
+
+    stats: {
+      daysWorked: workedCount,
+      totalDaysInMonth: getDaysInCurrentMonth(),
+    },
+
+    recentShifts: user.shifts.map((s) => ({
+      date: s.date,
+      shiftName: s.shift.name,
+      status: s.status,
+      time: `${s.shift.startTime}:00 - ${s.shift.endTime}:00`,
+    })),
+  };
 }
