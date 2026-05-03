@@ -114,18 +114,19 @@ const SHIFTS: ShiftDef[] = [
 
 const SHIFT_MAP = Object.fromEntries(SHIFTS.map((s) => [s.key, s]));
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
+// return `${year}-${month}-${day}`;
 function formatDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// adds n days to a Date
 function addDays(d: Date, n: number) {
   const r = new Date(d);
   r.setDate(r.getDate() + n);
   return r;
 }
 
+//
 function startOfWeek(d: Date) {
   const day = d.getDay(); // 0=Sun
   const diff = day === 0 ? -6 : 1 - day; // make Mon start
@@ -203,7 +204,6 @@ export default function SchedulePage() {
     return `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
   }, [viewMode, currentDate, weekDays]);
 
-  // ── Assignment helpers ──
   function getAssignments(dateKey: string, shiftKey: string) {
     return assignments.filter((a) => a.dateKey === dateKey && a.shiftKey === shiftKey);
   }
@@ -244,8 +244,6 @@ export default function SchedulePage() {
       openModal(dateKey, shiftKey);
     }
   }
-
-  // ─── Render: Tuần view (main) ──────────────────────────────────────────────
 
   function renderWeek(days: Date[]) {
     const todayKey = formatDateKey(new Date());
@@ -357,8 +355,6 @@ export default function SchedulePage() {
       </div>
     );
   }
-
-  // ─── Render: Ngày view ─────────────────────────────────────────────────────
 
   function renderDay() {
     return renderWeek([currentDate]);
