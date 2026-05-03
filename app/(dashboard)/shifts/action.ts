@@ -91,6 +91,13 @@ const shiftStyleByCode: Record<
     darkBorder: "#2a5a99",
     darkText: "#6aadff",
   },
+  "nghi-phep": {
+    border: "#B9A8FF",
+    textColor: "#4B3FB5",
+    darkBg: "rgba(185,168,255,0.15)",
+    darkBorder: "#7A6BE8",
+    darkText: "#D6CCFF",
+  },
 };
 
 const fallbackStyle = {
@@ -152,7 +159,7 @@ function mapAssignment(assignment: {
   date: Date;
   shiftId: string;
   userId: string;
-  status: "ASSIGNED" | "CHECKED_IN" | "ABSENT";
+  status: "ASSIGNED" | "ABSENT";
   user: { name: string };
   shift: { code: string };
 }): ShiftAssignmentRow {
@@ -243,12 +250,20 @@ export async function createAssignment(input: {
     return { success: false, error: "Dữ liệu gán ca không hợp lệ." };
   }
 
+  const shift = await prisma.shift.findUnique({
+    where: { id: parsed.data.shiftId },
+    select: { code: true },
+  });
+
+  const status = shift?.code === "nghi-phep" ? "ABSENT" : "ASSIGNED";
+
   try {
     const assignment = await prisma.shiftAssignment.create({
       data: {
         userId: parsed.data.userId,
         shiftId: parsed.data.shiftId,
         date: dateKeyToDate(parsed.data.dateKey),
+        status,
       },
       include: {
         user: { select: { name: true } },

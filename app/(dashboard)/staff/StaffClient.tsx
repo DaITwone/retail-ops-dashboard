@@ -60,10 +60,6 @@ function ShiftTag({ status }: { status: StaffRow["shiftStatus"] }) {
       label: "Nghỉ ca",
       cls: "border-(--border-button) text-(--text-muted) bg-(--bg-base)",
     },
-    "chua-check-in": {
-      label: "Chưa check-in",
-      cls: "border-[#C07A2B] text-[#C07A2B] bg-[rgba(192,122,43,0.06)]",
-    },
     "nghi-phep": {
       label: "Nghỉ phép",
       cls: "border-[#2B6CB0] text-[#2B6CB0] bg-[rgba(43,108,176,0.06)]",
@@ -342,7 +338,10 @@ function StaffDetailModal({
         className={`fixed top-0 right-0 z-50 h-full w-[395px] flex flex-col shadow-xl transition-transform duration-300 ${
           visible ? "translate-x-0" : "translate-x-full"
         }`}
-        style={{ background: "var(--bg-base)", borderLeft: "1px solid var(--border-button)" }}
+        style={{
+          background: "var(--bg-base)",
+          borderLeft: "1px solid var(--border-button)",
+        }}
       >
         {/* Header */}
         <div
@@ -384,11 +383,19 @@ function StaffDetailModal({
               {localData.initials || localData.name?.slice(0, 2).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-[13px] truncate">{localData.name}</div>
-              <div className="text-[11px] truncate" style={{ color: "var(--text-muted)" }}>
+              <div className="font-semibold text-[13px] truncate">
+                {localData.name}
+              </div>
+              <div
+                className="text-[11px] truncate"
+                style={{ color: "var(--text-muted)" }}
+              >
                 {localData.email}
               </div>
-              <div className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+              <div
+                className="text-[11px]"
+                style={{ color: "var(--text-muted)" }}
+              >
                 {localData.phone}
               </div>
             </div>
@@ -418,19 +425,39 @@ function StaffDetailModal({
             </div>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { label: "Đi làm", value: localData.stats?.daysWorked ?? 0, color: "var(--color-success)" },
-                { label: "Còn lại", value: localData.stats?.remaining ?? 26, color: "var(--text-primary)" },
-                { label: "Nghỉ phép", value: localData.stats?.leaveUsed ?? 5, color: "var(--color-warning)" },
+                {
+                  label: "Đi làm",
+                  value: localData.stats?.daysWorked ?? 0,
+                  color: "var(--color-success)",
+                },
+                {
+                  label: "Còn lại",
+                  value:
+                    (localData.stats?.totalDaysInMonth ?? 0) -
+                    (localData.stats?.daysWorked ?? 0),
+                  color: "var(--text-primary)",
+                },
+                {
+                  label: "Nghỉ phép",
+                  value: localData.stats?.daysOnLeave ?? 0,
+                  color: "var(--color-warning)",
+                },
               ].map(({ label, value, color }) => (
                 <div
                   key={label}
                   className="rounded border text-center py-2"
-                  style={{ borderColor: "var(--border-button)", background: "var(--bg-button)" }}
+                  style={{
+                    borderColor: "var(--border-button)",
+                    background: "var(--bg-button)",
+                  }}
                 >
                   <div className="text-[15px] font-bold" style={{ color }}>
                     {value}
                   </div>
-                  <div className="text-[10px] mt-0.5" style={{ color: "var(--text-muted)" }}>
+                  <div
+                    className="text-[10px] mt-0.5"
+                    style={{ color: "var(--text-muted)" }}
+                  >
                     {label}
                   </div>
                 </div>
@@ -456,7 +483,9 @@ function StaffDetailModal({
                   color: "var(--text-primary)",
                 }}
                 value={localData.name}
-                onChange={(e) => setLocalData({ ...localData, name: e.target.value })}
+                onChange={(e) =>
+                  setLocalData({ ...localData, name: e.target.value })
+                }
               />
               {/* Phone */}
               <input
@@ -467,7 +496,9 @@ function StaffDetailModal({
                   color: "var(--text-primary)",
                 }}
                 value={localData.phone}
-                onChange={(e) => setLocalData({ ...localData, phone: e.target.value })}
+                onChange={(e) =>
+                  setLocalData({ ...localData, phone: e.target.value })
+                }
               />
               {/* Email */}
               <input
@@ -478,7 +509,9 @@ function StaffDetailModal({
                   color: "var(--text-primary)",
                 }}
                 value={localData.email}
-                onChange={(e) => setLocalData({ ...localData, email: e.target.value })}
+                onChange={(e) =>
+                  setLocalData({ ...localData, email: e.target.value })
+                }
               />
               {/* Role + Position row */}
               <div className="grid grid-cols-2 gap-2">
@@ -490,7 +523,12 @@ function StaffDetailModal({
                     color: "var(--text-primary)",
                   }}
                   value={localData.role?.toLowerCase() || "staff"}
-                  onChange={(e) => setLocalData({ ...localData, role: e.target.value.toUpperCase() })}
+                  onChange={(e) =>
+                    setLocalData({
+                      ...localData,
+                      role: e.target.value.toUpperCase(),
+                    })
+                  }
                 >
                   <option value="staff">staff</option>
                   <option value="manager">manager</option>
@@ -503,7 +541,9 @@ function StaffDetailModal({
                     color: "var(--text-primary)",
                   }}
                   value={localData.position || "Nhân Viên Bán Hàng"}
-                  onChange={(e) => setLocalData({ ...localData, position: e.target.value })}
+                  onChange={(e) =>
+                    setLocalData({ ...localData, position: e.target.value })
+                  }
                 >
                   <option value="Nhân Viên Bán Hàng">Nhân Viên Bán Hàng</option>
                   <option value="Quản Lý Cửa Hàng">Quản Lý Cửa Hàng</option>
@@ -527,17 +567,26 @@ function StaffDetailModal({
                 <div
                   key={i}
                   className="rounded border-2 border-(--border-button) px-3 py-2 flex items-start justify-between"
-                  style={{ borderColor: "var(--border-button)", background: "var(--bg-button)" }}
+                  style={{
+                    borderColor: "var(--border-button)",
+                    background: "var(--bg-button)",
+                  }}
                 >
                   <div>
-                    <div className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                    <div
+                      className="text-[11px]"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
                       {new Date(s.date).toLocaleDateString("vi-VN", {
                         day: "numeric",
                         month: "numeric",
                         year: "numeric",
                       })}
                     </div>
-                    <div className="text-[12px] mt-0.5" style={{ color: "var(--text-primary)" }}>
+                    <div
+                      className="text-[12px] mt-0.5"
+                      style={{ color: "var(--text-primary)" }}
+                    >
                       {s.shiftName} · IN - · OUT -
                     </div>
                   </div>
@@ -560,12 +609,18 @@ function StaffDetailModal({
         {/* Footer */}
         <div
           className="px-3 py-3 flex gap-2 border-t"
-          style={{ borderColor: "var(--border-button)", background: "var(--bg-base)" }}
+          style={{
+            borderColor: "var(--border-button)",
+            background: "var(--bg-base)",
+          }}
         >
           <button
             onClick={handleClose}
             className="flex-1 rounded border py-2 text-[12px] font-medium transition-colors hover:bg-gray-100"
-            style={{ borderColor: "var(--border-button)", color: "var(--text-primary)" }}
+            style={{
+              borderColor: "var(--border-button)",
+              color: "var(--text-primary)",
+            }}
           >
             Hủy
           </button>
@@ -608,7 +663,7 @@ export default function StaffClient({
   ).length;
   const kpiNghi = staffList.filter((s) => s.shiftStatus === "nghi-ca").length;
   const kpiChuaCheckIn = staffList.filter(
-    (s) => s.shiftStatus === "chua-check-in",
+    (s) => s.shiftStatus === "nghi-ca",
   ).length;
 
   // ── Filtered data ──

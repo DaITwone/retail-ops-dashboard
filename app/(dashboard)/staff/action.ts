@@ -16,7 +16,7 @@ export type StaffRow = {
   createdAt: Date;
   // Tính từ ShiftAssignment của hôm nay
   currentShiftName: string | null;
-  shiftStatus: "dang-lam" | "nghi-ca" | "chua-check-in" | "nghi-phep";
+  shiftStatus: "dang-lam" | "nghi-ca" | "nghi-phep";
   // Số ca đã làm trong tháng hiện tại
   daysWorked: number;
   totalDaysInMonth: number;
@@ -88,12 +88,12 @@ export async function getStaffList(): Promise<StaffRow[]> {
     by: ["userId"],
     where: {
       date: { gte: monthStart },
-      status: "CHECKED_IN",
+      status: "ASSIGNED",
     },
     _count: { id: true },
   });
 
-  // console.log("MONTHLY STATS:", JSON.stringify(monthlyStats, null, 2)); 
+  // console.log("MONTHLY STATS:", JSON.stringify(monthlyStats, null, 2));
 
   const statsMap = new Map(monthlyStats.map((s) => [s.userId, s._count.id]));
 
@@ -101,11 +101,12 @@ export async function getStaffList(): Promise<StaffRow[]> {
     const todayAssignment = user.shifts[0] ?? null;
 
     let shiftStatus: StaffRow["shiftStatus"] = "nghi-ca";
+
     if (todayAssignment) {
-      if (todayAssignment.status === "CHECKED_IN") {
+      if (todayAssignment.status === "ABSENT") {
+        shiftStatus = "nghi-phep";
+      } else {
         shiftStatus = "dang-lam";
-      } else if (todayAssignment.status === "ASSIGNED") {
-        shiftStatus = "chua-check-in";
       }
     }
 
@@ -182,14 +183,19 @@ export async function getStaffDetail(userId: string) {
 
   if (!user) return null;
 
-  // Đếm số ca đã CHECKED_IN trong tháng hiện tại
-  const workedCount = await prisma.shiftAssignment.count({
+  const stats = await prisma.shiftAssignment.groupBy({
+    by: ["status"],
     where: {
       userId,
       date: { gte: monthStart },
-      status: "CHECKED_IN",
     },
+    _count: { id: true },
   });
+
+  const workedCount =
+    stats.find((s) => s.status === "ASSIGNED")?._count.id ?? 0;
+
+  const leaveCount = stats.find((s) => s.status === "ABSENT")?._count.id ?? 0;
 
   return {
     id: user.id,
@@ -201,6 +207,7 @@ export async function getStaffDetail(userId: string) {
 
     stats: {
       daysWorked: workedCount,
+      daysOnLeave: leaveCount,
       totalDaysInMonth: getDaysInCurrentMonth(),
     },
 

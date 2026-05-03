@@ -52,7 +52,6 @@ enum WasteReason {
 
 enum ShiftStatus {
   ASSIGNED
-  CHECKED_IN
   ABSENT
 }
 
