@@ -70,10 +70,14 @@ app/
   (dashboard)/
     layout.tsx                  Shell sidebar + header
     dashboard/page.tsx          Tong quan, charts, KPI
-    inventory/page.tsx          Quan ly ton kho mock
+    inventory/page.tsx          Server Component fetch ton kho
+    inventory/action.ts         Server Functions query inventory
+    inventory/InventoryClient.tsx Client UI filter/sort/select ton kho
     orders/page.tsx             Lap lich PO va lich su PO mock
     waste/page.tsx              Hang hong/huy mock
-    staff/page.tsx              Nhan su mock + modal tao local
+    staff/page.tsx              Server Component fetch nhan su
+    staff/action.ts             Server Functions query/mutate staff
+    staff/StaffClient.tsx       Client UI staff + drawer tao user
     shifts/page.tsx             Lich lam viec mock
     reports/page.tsx            Bao cao mock + charts
 
@@ -176,10 +180,13 @@ Model chinh:
 Enums:
 
 - `Role`: `MANAGER`, `STAFF`
+- `Position`: `SALES_STAFF`, `INTERN`, `ASSISTANT_MANAGER`, `STORE_MANAGER`
 - `OrderStatus`: `PENDING`, `APPROVED`, `DELIVERING`, `DELIVERED`, `REJECTED`
 - `WasteStatus`: `PENDING`, `APPROVED`, `REJECTED`
+- `WasteReason`: `EXPIRED`, `DAMAGED`, `QUALITY_LOSS`, `CUSTOMER_RETURN`, `IMPORT_ERROR`, `OTHER`
 - `ShiftStatus`: `ASSIGNED`, `CHECKED_IN`, `ABSENT`
 - `InventoryLogType`: `IMPORT`, `EXPORT`, `WASTE`, `ADJUSTMENT`
+- `InventoryStatus`: `OK`, `LOW_STOCK`, `OUT_OF_STOCK`, `EXPIRING_SOON`
 
 Seed:
 
@@ -217,10 +224,13 @@ Can luu y encoding:
 
 `/inventory`
 
-- Client Component.
-- `MOCK_PRODUCTS` local, filter/search/sort/select bang state.
-- Chua ghi DB.
-- Status local: `het-hang`, `sap-het`, `ok`, `sap-het-han`.
+- Da tach theo pattern Server + Client:
+  - `page.tsx` la Server Component, goi `getInventoryProducts()` roi render `<InventoryClient initialProducts={products} />`.
+  - `action.ts` co `"use server"`, import Prisma va export type `InventoryProduct`, `StockStatus`, function query.
+  - `InventoryClient.tsx` co `"use client"`, chi giu state UI: search, category/supplier filter, tab, sort, selected rows.
+- Hien chi doc DB, chua co mutation nhap/xuat hang. Hai button "Nhap hang" va "Xuat hang" moi la UI.
+- UI status key: `het-hang`, `sap-het`, `ok`, `sap-het-han`. Day la key client, khac enum DB `InventoryStatus`.
+- Luu y code hien tai dang doc `(p as any).stock`, `(p as any).expiresAt`, `(p as any).imageUrl`. Theo schema moi, ton kho nam o `Product.inventory.quantity/minStock/expiry/status`, con `imageUrl` nam tren `Product`. Khi sua tiep, nen query `include: { supplier: true, inventory: true }` va map tu `p.inventory`, khong doc `stock/expiresAt` truc tiep tren Product.
 
 `/orders`
 
@@ -238,9 +248,14 @@ Can luu y encoding:
 
 `/staff`
 
-- Client Component.
-- `MOCK_STAFF` local, tao nhan vien moi vao state.
-- Chua tao `User` trong DB, chua hash password cho staff moi.
+- Da tach theo pattern Server + Client:
+  - `page.tsx` la Server Component, goi `getStaffList()` roi render `<StaffClient initialData={staffList} />`.
+  - `action.ts` co `"use server"`, query `User`, include `ShiftAssignment` hom nay va groupBy so ca `CHECKED_IN` trong thang.
+  - `StaffClient.tsx` co `"use client"`, giu state UI: search, role/shift filter, tabs, selected rows, drawer tao nhan vien.
+- `createStaff(input)` da tao `User` that trong DB, hash password bang `bcrypt.hash(password ?? "123456", 10)`, check email unique, `revalidatePath("/staff")`.
+- Sau khi tao thanh cong, client them mot row tam bang `crypto.randomUUID()` de optimistic UI; server revalidate se sync lai khi route refresh. Neu can id that ngay lap tuc, action nen tra row vua tao.
+- `deactivateStaff(userId)` da update `User.isActive = false` va revalidate `/staff`, nhung UI hien chua noi nut goi action nay.
+- `StaffRow.createdAt` hien la `Date`. Neu gap loi serialization/hydration, convert sang string ISO trong action truoc khi truyen sang Client Component.
 
 `/shifts`
 
@@ -266,6 +281,55 @@ Khi bien mot page mock thanh data that:
 5. Dung transaction cho nghiep vu co nhieu bang.
 6. Sau mutation, refresh/revalidate route lien quan.
 7. Convert Date/Decimal thanh string/number truoc khi dua vao Client Component.
+
+Pattern dang dung o `/staff` va `/inventory`:
+
+```text
+app/(dashboard)/feature/
+  page.tsx        Server Component: await getFeatureRows(), render Client
+  action.ts      "use server": Prisma query/mutation, export type DTO cho client
+  FeatureClient.tsx
+                 "use client": UI state, filter/sort/modal, goi action bang startTransition/useActionState
+```
+
+`page.tsx` nen rat mong:
+
+```tsx
+import { getRows } from "./action";
+import { FeatureClient } from "./FeatureClient";
+
+export default async function FeaturePage() {
+  const rows = await getRows();
+  return <FeatureClient initialRows={rows} />;
+}
+```
+
+`action.ts` la boundary server:
+
+- Dat `"use server"` tren dau file neu Client Component can import function tu file nay.
+- Duoc import `@/lib/prisma`, `next/cache`, `bcryptjs`, `auth`, enums tu `@/generated/prisma/enums`.
+- Export DTO/type client can dung, nhung DTO phai serializable: string/number/boolean/null/plain object/array. Convert `Decimal`, `Date`, enum label neu can.
+- Query nen map data ve shape UI can, khong pass Prisma model nguyen ban neu co field nhay cam nhu `password`.
+- Mutation nen return object on dinh dang `{ success: boolean, error?: string, data?: ... }` de Client Component hien loi/loading de hon.
+- Sau mutation goi `revalidatePath("/route")`. Neu client can UI cap nhat ngay, co the optimistic append/update state nhu `StaffClient`, nhung dung coi optimistic row la source of truth.
+
+`FeatureClient.tsx`:
+
+- Bat buoc co `"use client"` neu dung state/event handler/modal/table interactive.
+- Chi import type/Server Function tu `./action`; khong import `@/lib/prisma`.
+- Goi mutation trong event handler qua `useTransition` hoac form qua `useActionState`.
+- Giu filter/search/sort/select o client neu dataset vua phai; neu dataset lon, day pagination/filter len server.
+- Internal status key nen la ASCII/enum-safe (`sap-het`, `dang-lam`, `PENDING`), label tieng Viet map rieng trong UI.
+
+Quy trinh noi mot page moi:
+
+1. Xac dinh model/schema va DTO UI can.
+2. Tao `action.ts` voi query `getXList()` map Prisma -> DTO serializable.
+3. Sua `page.tsx` thanh Server Component goi query va truyen `initialData`.
+4. Tach UI dang co sang `XClient.tsx`, them `"use client"` va nhan props initial.
+5. Neu co tao/sua/xoa, them Server Function mutation, validate input, auth/role, transaction neu can, `revalidatePath`.
+6. Trong client, hien pending/error bang `useTransition`/`useActionState`, optimistic update chi khi khong lam sai nghiep vu.
+7. Chay lint/build va test route protected.
 
 Vi du nghiep vu:
 
