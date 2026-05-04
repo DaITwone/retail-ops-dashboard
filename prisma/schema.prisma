@@ -236,6 +236,7 @@ model OrderItem {
   product   Product @relation(fields: [productId], references: [id])
 
   quantity Int
+  receivedQuantity Int @default(0) 
   // price là snapshot tại thời điểm đặt hàng, không phải Product.price hiện tại
   price    Decimal @db.Decimal(10, 2)
 

@@ -545,10 +545,10 @@ function StaffDetailModal({
                     setLocalData({ ...localData, position: e.target.value })
                   }
                 >
-                  <option value="Nhân Viên Bán Hàng">Nhân Viên Bán Hàng</option>
-                  <option value="Quản Lý Cửa Hàng">Quản Lý Cửa Hàng</option>
-                  <option value="Kho">Kho</option>
-                  <option value="Thu Ngân">Thu Ngân</option>
+                  <option value="SALES_STAFF">Nhân Viên Bán Hàng</option>
+                  <option value="INTERN">Nhân Viên Thử Việc</option>
+                  <option value="ASSISTANT_MANAGER">Cửa Hàng Phó</option>
+                  <option value="STORE_MANAGER">Cửa Hàng Trưởng</option>
                 </select>
               </div>
             </div>
@@ -587,7 +587,10 @@ function StaffDetailModal({
                       className="text-[12px] mt-0.5"
                       style={{ color: "var(--text-primary)" }}
                     >
-                      {s.shiftName} · IN - · OUT -
+                      {s.shiftName}{" "}
+                      <span className="text-(--text-secondary)">
+                        · IN · OUT ·
+                      </span>
                     </div>
                   </div>
                   <span
@@ -683,7 +686,11 @@ export default function StaffClient({
         return false;
       if (activeTab === "dang-lam" && s.shiftStatus !== "dang-lam")
         return false;
-      if (activeTab === "nghi" && s.shiftStatus !== "nghi-ca") return false;
+      if (
+        activeTab === "nghi" &&
+        !["nghi-ca", "nghi-phep"].includes(s.shiftStatus)
+      )
+        return false;
       return true;
     });
   }, [search, statusFilter, shiftFilter, activeTab, staffList]);
