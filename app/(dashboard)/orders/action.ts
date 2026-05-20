@@ -181,6 +181,19 @@ function dateKeyToDate(dateKey: string) {
   return new Date(`${dateKey}T00:00:00.000Z`);
 }
 
+function getCreateOrderErrorMessage(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2003"
+  ) {
+    return "Không thể tạo PO vì dữ liệu liên kết không hợp lệ. Hãy tải lại trang và thử lại.";
+  }
+
+  return error instanceof Error ? error.message : "Không thể tạo PO.";
+}
+
 function mapOrder(order: {
   id: string;
   code: string;
@@ -248,14 +261,14 @@ async function requireUser() {
 }
 
 async function getNextOrderNumber(tx: Pick<typeof prisma, "order">) {
-  const orders = await tx.order.findMany({
+  const latestOrder = await tx.order.findFirst({
     select: { code: true },
+    orderBy: { code: "desc" },
   });
 
-  return orders.reduce((max, order) => {
-    const number = Number(order.code.replace(/^PO-/, ""));
-    return Number.isFinite(number) ? Math.max(max, number) : max;
-  }, 20247) + 1;
+  const latestNumber = latestOrder ? Number(latestOrder.code.replace(/^PO-/, "")) : 20247;
+
+  return Number.isFinite(latestNumber) ? latestNumber + 1 : 20248;
 }
 
 export async function getOrdersPageData(): Promise<OrdersPageData> {
@@ -324,23 +337,28 @@ export async function createWeeklyOrders(input: CreateWeeklyOrdersInput) {
     const created = await prisma.$transaction(async (tx) => {
       let nextNumber = await getNextOrderNumber(tx);
       const result: OrderRow[] = [];
+      const allProductIds = [
+        ...new Set(parsed.data.orders.flatMap((order) => order.items.map((item) => item.productId))),
+      ];
+      const products = await tx.product.findMany({
+        where: {
+          id: { in: allProductIds },
+          isActive: true,
+        },
+        include: { supplier: true },
+      });
+      const productMap = new Map(products.map((product) => [product.id, product]));
 
       for (const orderInput of parsed.data.orders) {
-        const productIds = orderInput.items.map((item) => item.productId);
-        const products = await tx.product.findMany({
-          where: {
-            id: { in: productIds },
-            supplierId: orderInput.supplierId,
-            isActive: true,
-          },
-          include: { supplier: true },
+        const hasInvalidProduct = orderInput.items.some((item) => {
+          const product = productMap.get(item.productId);
+          return !product || product.supplierId !== orderInput.supplierId;
         });
 
-        if (products.length !== productIds.length) {
+        if (hasInvalidProduct) {
           throw new Error("Một số sản phẩm không thuộc nhà cung cấp đã chọn.");
         }
 
-        const productMap = new Map(products.map((product) => [product.id, product]));
         const totalAmount = orderInput.items.reduce((sum, item) => {
           const product = productMap.get(item.productId);
           return sum + item.quantity * Number(product?.price ?? 0);
@@ -355,37 +373,45 @@ export async function createWeeklyOrders(input: CreateWeeklyOrdersInput) {
             totalAmount,
             deliveryDate: dateKeyToDate(orderInput.deliveryDateKey),
             note: parsed.data.note?.trim() || null,
-            items: {
-              create: orderInput.items.map((item) => {
-                const product = productMap.get(item.productId);
-
-                return {
-                  productId: item.productId,
-                  quantity: item.quantity,
-                  receivedQuantity: 0,
-                  price: product?.price ?? 0,
-                };
-              }),
-            },
           },
+        });
+
+        await tx.orderItem.createMany({
+          data: orderInput.items.map((item) => {
+            const product = productMap.get(item.productId);
+
+            return {
+              orderId: order.id,
+              productId: item.productId,
+              quantity: item.quantity,
+              receivedQuantity: 0,
+              price: product?.price ?? 0,
+            };
+          }),
+        });
+
+        const createdOrder = await tx.order.findUnique({
+          where: { id: order.id },
           include: {
             supplier: true,
             items: { include: { product: true } },
           },
         });
 
-        result.push(mapOrder(order));
+        if (!createdOrder) throw new Error("Không thể tải lại PO vừa tạo.");
+
+        result.push(mapOrder(createdOrder));
       }
 
       return result;
-    });
+    }, { timeout: 20_000 });
 
     revalidatePath("/orders");
     return { success: true, data: created };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Không thể tạo PO.",
+      error: getCreateOrderErrorMessage(error),
     };
   }
 }

@@ -13,6 +13,7 @@ import {
   Package,
   Search,
   TrendingUp,
+  Trash2,
   XCircle,
 } from "lucide-react";
 import {
@@ -127,12 +128,14 @@ function WeeklyOrderTable({
   dayLabels,
   onQtyChange,
   onAutoFill,
+  onClearRow,
 }: {
   supplier: OrderSupplier;
   weekQty: WeekQty;
   dayLabels: string[];
   onQtyChange: (productId: string, dayIdx: number, value: number) => void;
   onAutoFill: (productId: string) => void;
+  onClearRow: (productId: string) => void;
 }) {
   const [search, setSearch] = useState("");
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
@@ -221,6 +224,7 @@ function WeeklyOrderTable({
               ))}
               <th className="text-center px-2 py-2.5 text-(--text-secondary) font-medium w-16">Tổng SL</th>
               <th className="text-right px-3 py-2.5 text-(--text-secondary) font-medium w-24">Thành tiền</th>
+              <th className="text-center px-2 py-2.5 w-9" aria-label="Xóa dòng" />
             </tr>
           </thead>
           <tbody>
@@ -234,7 +238,7 @@ function WeeklyOrderTable({
                     style={{ background: `${supplier.colorLight}88` }}
                     onClick={() => setExpandedCats((prev) => ({ ...prev, [category]: !isExpanded }))}
                   >
-                    <td colSpan={12} className="px-3 py-1.5">
+                    <td colSpan={14} className="px-3 py-1.5">
                       <div className="flex items-center gap-1.5">
                         {isExpanded ? (
                           <ChevronDown className="w-3 h-3 text-(--text-muted)" />
@@ -258,7 +262,7 @@ function WeeklyOrderTable({
                       return (
                         <tr
                           key={product.id}
-                          className={`border-t border-(--border-chart) transition-colors ${hasAny ? "" : "opacity-70"} hover:bg-(--bg-table)/40`}
+                          className={`group border-t border-(--border-chart) transition-colors ${hasAny ? "" : "opacity-70"} hover:bg-(--bg-table)/40`}
                         >
                           <td className="px-3 py-2 sticky left-0 bg-(--bg-base) z-10 border-r border-(--border-chart)">
                             <div className="font-medium text-(--text-primary) leading-tight text-[11px]">{product.name}</div>
@@ -310,6 +314,19 @@ function WeeklyOrderTable({
                               <span className="text-(--text-muted)">-</span>
                             )}
                           </td>
+                          <td className="text-center px-2 py-2">
+                            {hasAny && (
+                              <button
+                                type="button"
+                                onClick={() => onClearRow(product.id)}
+                                title="Xóa số lượng dòng này"
+                                aria-label={`Xóa số lượng ${product.name}`}
+                                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-(--text-muted) opacity-0 transition-all hover:bg-red-50 hover:text-(--color-danger) group-hover:opacity-100 focus:opacity-100 cursor-pointer"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
@@ -342,6 +359,7 @@ function WeeklyOrderTable({
                   {grandTotal > 0 ? fmtVND(grandTotal) : "-"}
                 </span>
               </td>
+              <td />
             </tr>
           </tbody>
         </table>
@@ -509,6 +527,54 @@ function SuccessModal({ poCodes, onClose }: { poCodes: string[]; onClose: () => 
   );
 }
 
+function ClearAllModal({
+  activeProducts,
+  onCancel,
+  onConfirm,
+}: {
+  activeProducts: number;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onCancel}>
+      <div
+        className="bg-(--bg-base) border border-(--border-chart) rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+            <Trash2 className="h-5 w-5 text-(--color-danger)" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-(--text-primary)">Xóa toàn bộ số lượng?</h3>
+            <p className="mt-1 text-xs leading-relaxed text-(--text-secondary)">
+              Bạn có chắc chắn muốn xóa toàn bộ số lượng đã nhập? {activeProducts} sản phẩm đang lên lịch sẽ được đưa về 0.
+            </p>
+          </div>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-lg border border-(--border-button) bg-(--bg-table) px-3 py-2 text-xs font-medium text-(--text-secondary) transition-colors hover:text-(--text-primary) cursor-pointer"
+          >
+            Hủy
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-(--color-danger) px-3 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90 cursor-pointer"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Đồng ý
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function OrdersClient({ initialData }: { initialData: OrdersPageData }) {
   const router = useRouter();
   const weekDates = useMemo(() => {
@@ -528,6 +594,7 @@ export default function OrdersClient({ initialData }: { initialData: OrdersPageD
   const [poList, setPoList] = useState<OrderRow[]>(initialData.orders);
   const [selectedPO, setSelectedPO] = useState<OrderRow | null>(null);
   const [showSuccess, setShowSuccess] = useState<string[] | null>(null);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
   const [poFilter, setPoFilter] = useState<FilterStatus>("ALL");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -582,6 +649,23 @@ export default function OrdersClient({ initialData }: { initialData: OrdersPageD
         [productId]: autoQty,
       },
     }));
+  };
+
+  const handleClearRow = (productId: string) => {
+    if (!currentSupplier) return;
+
+    setWeekQtyMap((prev) => ({
+      ...prev,
+      [currentSupplier.id]: {
+        ...(prev[currentSupplier.id] ?? {}),
+        [productId]: Array(7).fill(0),
+      },
+    }));
+  };
+
+  const handleClearAll = () => {
+    setWeekQtyMap(Object.fromEntries(suppliers.map((supplier) => [supplier.id, {}])));
+    setShowClearAllConfirm(false);
   };
 
   const handleCreatePO = () => {
@@ -726,6 +810,14 @@ export default function OrdersClient({ initialData }: { initialData: OrdersPageD
                     className="text-xs bg-(--bg-base) border border-(--border-button) rounded-lg px-3 py-2 text-(--text-primary) outline-none focus:border-(--color-active) w-48 transition-colors"
                   />
                   <button
+                    type="button"
+                    onClick={() => setShowClearAllConfirm(true)}
+                    className="flex items-center gap-2 bg-(--bg-base) text-(--color-danger) text-xs font-semibold rounded-lg px-3 py-2 border border-red-200 dark:border-red-900/40 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors cursor-pointer whitespace-nowrap"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Xóa tất cả
+                  </button>
+                  <button
                     onClick={handleCreatePO}
                     disabled={isPending}
                     className="flex items-center gap-2 bg-(--color-active) text-white text-xs font-semibold rounded-lg px-4 py-2 hover:bg-(--accent-hover) transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
@@ -784,6 +876,7 @@ export default function OrdersClient({ initialData }: { initialData: OrdersPageD
             dayLabels={dayLabels}
             onQtyChange={handleQtyChange}
             onAutoFill={handleAutoFill}
+            onClearRow={handleClearRow}
           />
         </div>
       ) : (
@@ -919,6 +1012,13 @@ export default function OrdersClient({ initialData }: { initialData: OrdersPageD
             setShowSuccess(null);
             setView("history");
           }}
+        />
+      )}
+      {showClearAllConfirm && (
+        <ClearAllModal
+          activeProducts={totalActiveProducts}
+          onCancel={() => setShowClearAllConfirm(false)}
+          onConfirm={handleClearAll}
         />
       )}
     </div>
